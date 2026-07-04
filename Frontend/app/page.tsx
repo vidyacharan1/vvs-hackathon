@@ -71,12 +71,12 @@ function NavBar() {
           <a className="text-on-surface-variant hover:text-primary transition-colors text-label-md" href="#contact">Contact</a>
         </div>
         <div className="flex items-center space-x-4">
-          <Link href="/dashboard" className="text-primary font-label-md px-4 py-2 hover:bg-surface-container-low rounded-lg transition-all">
+          <Link href="/login" className="text-primary font-label-md px-4 py-2 hover:bg-surface-container-low rounded-lg transition-all">
             Login
           </Link>
-          <button className="gradient-button text-white font-label-md px-6 py-2 rounded-lg active:scale-90 transition-transform">
+          <Link href="/signup" className="gradient-button text-white font-label-md px-6 py-2 rounded-lg active:scale-90 transition-transform">
             Sign Up
-          </button>
+          </Link>
         </div>
       </div>
     </nav>
@@ -99,11 +99,11 @@ function HeroSection() {
             Arogyam empowers districts, PHCs, and CHCs to monitor facilities, patients, medicine inventory, disease trends, and actionable AI insights — all from one intelligent platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <button className="gradient-button text-white px-8 py-4 rounded-xl font-label-md flex items-center justify-center">
+            <Link href="/signup" className="gradient-button text-white px-8 py-4 rounded-xl font-label-md flex items-center justify-center">
               Get Started <ArrowRight className="ml-2 w-5 h-5" />
-            </button>
+            </Link>
             <Link
-              href="/dashboard"
+              href="/login"
               className="border border-primary text-primary px-8 py-4 rounded-xl font-label-md hover:bg-primary/5 transition-all flex items-center justify-center"
             >
               <Monitor className="mr-2 w-5 h-5" /> View Dashboard
@@ -385,14 +385,14 @@ function CTASection() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
-              href="/dashboard"
+              href="/login"
               className="gradient-button text-white px-10 py-5 rounded-xl font-label-md"
             >
               Login Now
             </Link>
-            <button className="bg-white border border-primary text-primary px-10 py-5 rounded-xl font-label-md hover:bg-primary/5 transition-all">
+            <Link href="/signup" className="bg-white border border-primary text-primary px-10 py-5 rounded-xl font-label-md hover:bg-primary/5 transition-all">
               Create Account
-            </button>
+            </Link>
           </div>
         </div>
       </div>
