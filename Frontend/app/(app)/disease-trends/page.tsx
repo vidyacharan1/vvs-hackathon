@@ -1,110 +1,112 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { TrendingUp, AlertTriangle } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { healthTrends, diseaseSpikes, villageConditions, getFacilityName } from "@/lib/demo-data";
-
-const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
-const stagger = { animate: { transition: { staggerChildren: 0.04 } } };
-
-function StatBox({ label, value, color }: { label: string; value: string | number; color?: string }) {
-  return (
-    <div className="flex flex-col items-center text-center p-3 rounded-xl bg-white border border-[#e4e4e7]">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa] mb-1.5">{label}</div>
-      <div className={`text-xl font-bold ${color || "text-[#18181b]"}`}>{value}</div>
-    </div>
-  );
-}
+import { AlertTriangle, ArrowDown, ArrowUp, TrendingUp } from "lucide-react";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { diseaseSpikes, getFacilityName, healthTrends, villageConditions } from "@/lib/demo-data";
 
 export default function DiseaseTrendsPage() {
-  return (
-    <motion.div className="p-6 space-y-6 max-w-7xl mx-auto" initial="initial" animate="animate" variants={stagger}>
-      <motion.div variants={fadeUp}>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-9 h-9 rounded-lg bg-white border border-[#e4e4e7] flex items-center justify-center">
-            <TrendingUp className="w-4 h-4 text-[#18181b]" />
-          </div>
-          <h2 className="text-xl font-bold tracking-tight">Disease Trends</h2>
-        </div>
-        <p className="text-sm text-[#a1a1aa] ml-12">Disease spike detection and trend analysis across all facilities</p>
-      </motion.div>
+  const criticalSpikes = diseaseSpikes.filter((item) => item.risk === "critical" || item.risk === "high").length;
 
-      <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-[#e4e4e7]">
-        <div className="h-80">
+  return (
+    <div className="space-y-4 p-4 md:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-label-xs uppercase tracking-widest text-outline">Analytics</p>
+          <h1 className="text-headline-md font-bold text-on-surface md:text-headline-lg">Disease Trends</h1>
+          <p className="text-label-sm text-outline">Spike detection and village-level condition clusters.</p>
+        </div>
+        <div className="card-glass flex items-center gap-3 rounded-2xl px-3.5 py-2">
+          <TrendingUp className="h-4 w-4 text-brand-purple" />
+          <div>
+            <p className="text-label-xs text-outline">Active High Spikes</p>
+            <p className="text-label-md font-bold text-error">{criticalSpikes}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="card-glass p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="text-label-xs uppercase tracking-widest text-outline">7-month trend</p>
+            <h2 className="text-headline-sm font-bold text-on-surface">Disease Trend Chart</h2>
+          </div>
+          <span className="rounded-full bg-brand-purple/10 px-3 py-1 text-label-xs font-bold text-brand-purple">District view</span>
+        </div>
+        <div className="h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={healthTrends}>
-              <defs>
-                <linearGradient id="feverG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="respG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f97316" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" opacity={0.5} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e4e4e7", boxShadow: "0 4px 12px rgba(0,0,0,0.06)" }} />
-              <Legend />
-              <Area type="monotone" dataKey="fever" stroke="#ef4444" strokeWidth={2} fill="url(#feverG)" name="Fever" />
-              <Area type="monotone" dataKey="respiratory" stroke="#f97316" strokeWidth={2} fill="url(#respG)" name="Respiratory" />
-            </AreaChart>
+            <LineChart data={healthTrends} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke="#e4e8f7" strokeDasharray="3 3" />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#5E668A" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#5E668A" }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ backgroundColor: "white", border: "1px solid #E4E8F7", borderRadius: 14 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Line type="monotone" dataKey="fever" stroke="#ef4444" strokeWidth={2} dot={false} name="Fever" />
+              <Line type="monotone" dataKey="respiratory" stroke="#f97316" strokeWidth={2} dot={false} name="Respiratory" />
+              <Line type="monotone" dataKey="hypertension" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Hypertension" />
+              <Line type="monotone" dataKey="diabetes" stroke="#3b82f6" strokeWidth={2} dot={false} name="Diabetes" />
+              <Line type="monotone" dataKey="diarrhea" stroke="#10b981" strokeWidth={2} dot={false} name="Diarrhea" />
+            </LineChart>
           </ResponsiveContainer>
         </div>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div variants={fadeUp} className="space-y-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">Weekly Comparison</h2>
-            <p className="text-sm text-[#a1a1aa] mt-1">This week vs last week disease spikes</p>
-          </div>
-          {diseaseSpikes.map((d) => (
-            <div key={d.condition + d.facilityId} className="bg-white rounded-2xl p-5 border border-[#e4e4e7]">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-bold text-[#18181b]">{d.condition}</span>
-                <span className={`badge-${d.risk}`}>{d.risk.charAt(0).toUpperCase() + d.risk.slice(1)}</span>
-              </div>
-              <div className="grid grid-cols-4 gap-3">
-                <StatBox label="This Week" value={d.thisWeek} />
-                <StatBox label="Last Week" value={d.lastWeek} />
-                <StatBox
-                  label="Change %"
-                  value={d.increase > 0 ? `+${d.increase}%` : `${d.increase}%`}
-                  color={d.increase > 50 ? "#dc2626" : d.increase > 20 ? "#ea580c" : "#16a34a"}
-                />
-                <StatBox label="Facility" value={getFacilityName(d.facilityId)} />
-              </div>
-              <div className="mt-4 p-3 rounded-xl bg-[#fef2f2] border border-[#ef4444]/10 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-[#dc2626] shrink-0" />
-                <p className="text-xs text-[#52525b]">Linked medicine pressure: {d.linkedMedicine}</p>
-              </div>
-            </div>
-          ))}
-        </motion.div>
-
-        <motion.div variants={fadeUp} className="space-y-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">Village Clusters</h2>
-            <p className="text-sm text-[#a1a1aa] mt-1">Village-wise condition clusters</p>
-          </div>
-          {villageConditions.map((v, i) => (
-            <div key={i} className="bg-white rounded-2xl p-5 border border-[#e4e4e7] flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-[#18181b]">{v.village}</p>
-                <p className="text-xs text-[#a1a1aa] mt-0.5">{getFacilityName(v.facilityId)}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex px-3 py-1 rounded-lg bg-[#f4f4f5] text-[#18181b] text-xs font-medium">{v.condition}</span>
-                <span className="text-sm font-bold text-[#18181b]">{v.count} cases</span>
-              </div>
-            </div>
-          ))}
-        </motion.div>
       </div>
-    </motion.div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="card-glass p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-label-xs uppercase tracking-widest text-outline">Spike Matrix</p>
+              <h2 className="text-headline-sm font-bold text-on-surface">This Week vs Last Week</h2>
+            </div>
+            <AlertTriangle className="h-5 w-5 text-warning" />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {diseaseSpikes.map((disease) => (
+              <div key={`${disease.condition}-${disease.facilityId}`} className="rounded-2xl border border-outline-variant/20 bg-white/70 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-label-md font-bold text-on-surface">{disease.condition}</p>
+                    <p className="truncate text-[11px] text-outline">{getFacilityName(disease.facilityId)}</p>
+                  </div>
+                  <span className={`pill pill-${disease.risk}`}>{disease.risk}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-xl bg-surface-container-lowest/80 p-2"><p className="text-[10px] text-outline">This Week</p><p className="text-label-md font-bold">{disease.thisWeek}</p></div>
+                  <div className="rounded-xl bg-surface-container-lowest/80 p-2"><p className="text-[10px] text-outline">Last Week</p><p className="text-label-md font-bold">{disease.lastWeek}</p></div>
+                  <div className="rounded-xl bg-surface-container-lowest/80 p-2">
+                    <p className="text-[10px] text-outline">Change</p>
+                    <p className={`flex items-center justify-center gap-1 text-label-md font-bold ${disease.increase > 50 ? "text-error" : disease.increase > 20 ? "text-warning" : "text-success"}`}>
+                      {disease.increase >= 0 ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+                      {disease.increase}%
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-2 rounded-xl border border-warning/10 bg-warning/5 px-2.5 py-2 text-[11px] text-outline">Medicine pressure: {disease.linkedMedicine}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card-glass p-4">
+          <div className="mb-3">
+            <p className="text-label-xs uppercase tracking-widest text-outline">Village Clusters</p>
+            <h2 className="text-headline-sm font-bold text-on-surface">Condition Hotspots</h2>
+          </div>
+          <div className="space-y-2">
+            {villageConditions.map((village) => (
+              <div key={`${village.village}-${village.condition}`} className="flex items-center justify-between gap-3 rounded-2xl border border-outline-variant/20 bg-white/70 p-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-label-md font-bold text-on-surface">{village.village}</p>
+                  <p className="truncate text-[11px] text-outline">{getFacilityName(village.facilityId)}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="rounded-full bg-brand-purple/10 px-2 py-1 text-[11px] font-bold text-brand-purple">{village.condition}</span>
+                  <p className="mt-1 text-label-sm font-bold text-on-surface">{village.count} cases</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,152 +1,148 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { ElementType } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Building2, Search, MapPin, Activity, Users, BedDouble, AlertTriangle } from "lucide-react";
-import { facilities } from "@/lib/demo-data";
-import type { Facility } from "@/lib/demo-data";
+import { Activity, BedDouble, Building2, ChevronRight, MapPin, Search, Stethoscope, Users } from "lucide-react";
+import { dashboardSummary, facilities } from "@/lib/demo-data";
+import type { Facility, FacilityStatus } from "@/lib/demo-data";
 
-const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
+const statusLabel: Record<FacilityStatus, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
 
-function statusDotColor(status: string) {
-  switch (status) {
-    case "critical": return "bg-[#ef4444]";
-    case "high": return "bg-[#f59e0b]";
-    case "medium": return "bg-[#ca8a04]";
-    default: return "bg-[#10b981]";
-  }
+function riskFromScore(score: number): FacilityStatus {
+  if (score >= 85) return "critical";
+  if (score >= 70) return "high";
+  if (score >= 45) return "medium";
+  return "low";
 }
 
-function badgeClass(status: string) {
-  switch (status) {
-    case "critical": return "badge-critical";
-    case "high": return "badge-high";
-    case "medium": return "badge-medium";
-    default: return "badge-low";
-  }
-}
-
-function riskStyle(score: number) {
-  if (score >= 70) return { container: "bg-[#fef2f2] text-[#dc2626]" };
-  if (score >= 40) return { container: "bg-[#fff7ed] text-[#ea580c]" };
-  return { container: "bg-[#f0fdf4] text-[#16a34a]" };
-}
-
-function FacilityCard({ f }: { f: Facility }) {
-  const rs = riskStyle(f.riskScore);
+function StatChip({ label, value, icon: Icon }: { label: string; value: string | number; icon: ElementType }) {
   return (
-    <motion.div variants={fadeUp}>
-      <Link
-        href={`/facilities/${f.id}`}
-        className="bg-white rounded-2xl p-5 border border-[#e4e4e7] hover:scale-[1.02] transition-all duration-300 group block"
-      >
-        <div className="flex items-start justify-between mb-5">
-          <div className="flex items-start gap-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#eef2ff] text-[#6366f1] shrink-0">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-[#6366f1] uppercase tracking-wider">{f.type}</span>
-                <span className={`w-1.5 h-1.5 rounded-full ${statusDotColor(f.status)}`} />
-                <span className={badgeClass(f.status)}>
-                  {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
-                </span>
-              </div>
-              <h3 className="text-base font-semibold">{f.name}</h3>
-              <p className="text-sm text-[#a1a1aa] flex items-center gap-1 mt-0.5">
-                <MapPin className="w-3 h-3 shrink-0" /> {f.village}, {f.mandal} · {f.district}
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="card-glass flex min-w-0 items-center gap-2 p-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-brand-purple/10">
+        <Icon className="h-4 w-4 text-brand-purple" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-label-xs uppercase tracking-widest text-outline">{label}</p>
+        <p className="text-xl font-bold leading-none text-on-surface">{value}</p>
+      </div>
+    </div>
+  );
+}
 
-        <div className="grid grid-cols-4 gap-3">
-          <div className="flex flex-col items-center text-center p-2.5 rounded-xl bg-[#eef2ff]">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white text-[#6366f1] mb-1.5">
-              <Activity className="w-4 h-4" />
+function FacilityRow({ facility, rank }: { facility: Facility; rank: number }) {
+  const status = riskFromScore(facility.riskScore);
+
+  return (
+    <tr className="border-b border-outline-variant/10 transition hover:bg-brand-purple/5">
+      <td className="w-10 px-3 py-2.5 text-label-sm font-bold text-outline">{rank}</td>
+      <td className="min-w-0 px-3 py-2.5">
+        <Link href={`/facilities/${facility.id}`} className="group block min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-purple/10 sm:flex">
+              <Building2 className="h-4 w-4 text-brand-purple" />
             </div>
-            <div className="text-base font-bold">{f.todayOpd}</div>
-            <div className="text-[10px] text-[#6366f1] uppercase tracking-wider font-semibold">OPD</div>
-          </div>
-          <div className="flex flex-col items-center text-center p-2.5 rounded-xl bg-[#f0fdf4]">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white text-[#16a34a] mb-1.5">
-              <Users className="w-4 h-4" />
+            <div className="min-w-0">
+              <p className="truncate text-label-md font-bold text-on-surface group-hover:text-brand-purple">{facility.name}</p>
+              <p className="truncate text-[11px] text-outline">{facility.type} - {facility.village}, {facility.mandal}</p>
             </div>
-            <div className="text-base font-bold">{f.doctorsPresent}/{f.totalDoctors}</div>
-            <div className="text-[10px] text-[#16a34a] uppercase tracking-wider font-semibold">Doctors</div>
           </div>
-          <div className="flex flex-col items-center text-center p-2.5 rounded-xl bg-[#eef2ff]">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white text-[#6366f1] mb-1.5">
-              <BedDouble className="w-4 h-4" />
-            </div>
-            <div className="text-base font-bold">{f.bedsOccupied}/{f.totalBeds}</div>
-            <div className="text-[10px] text-[#6366f1] uppercase tracking-wider font-semibold">Beds</div>
+        </Link>
+      </td>
+      <td className="hidden px-3 py-2.5 text-label-sm font-semibold text-outline md:table-cell">{facility.type}</td>
+      <td className="hidden px-3 py-2.5 text-label-sm text-outline lg:table-cell">
+        <span className="inline-flex items-center gap-1 truncate"><MapPin className="h-3 w-3 shrink-0" /> {facility.village}</span>
+      </td>
+      <td className="px-3 py-2.5"><span className={`pill pill-${status}`}>{statusLabel[status]}</span></td>
+      <td className="px-3 py-2.5 text-label-md font-bold text-on-surface">{facility.todayOpd}</td>
+      <td className="hidden px-3 py-2.5 text-label-sm text-on-surface md:table-cell">{facility.doctorsPresent}/{facility.totalDoctors}</td>
+      <td className="hidden px-3 py-2.5 text-label-sm text-on-surface lg:table-cell">{facility.nursesPresent}/{facility.totalNurses}</td>
+      <td className="px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-12 overflow-hidden rounded-full bg-outline-variant/20">
+            <div className={`h-full rounded-full ${facility.bedOccupancyRate >= 85 ? "bg-error" : facility.bedOccupancyRate >= 70 ? "bg-warning" : "bg-success"}`} style={{ width: `${facility.bedOccupancyRate}%` }} />
           </div>
-          <div className={`flex flex-col items-center text-center p-2.5 rounded-xl ${rs.container}`}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/80 mb-1.5">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div className="text-base font-bold">{f.riskScore}%</div>
-            <div className="text-[10px] uppercase tracking-wider font-semibold">Risk</div>
-          </div>
+          <span className="text-label-xs font-bold text-on-surface">{facility.bedOccupancyRate}%</span>
         </div>
-      </Link>
-    </motion.div>
+      </td>
+      <td className="w-10 px-3 py-2.5">
+        <Link href={`/facilities/${facility.id}`} className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-purple/10 text-brand-purple transition hover:bg-brand-purple hover:text-white">
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </td>
+    </tr>
   );
 }
 
 export default function FacilitiesPage() {
   const [search, setSearch] = useState("");
-
-  const filtered = facilities.filter((f) =>
-    f.name.toLowerCase().includes(search.toLowerCase()) ||
-    f.village.toLowerCase().includes(search.toLowerCase()) ||
-    f.mandal.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return [...facilities]
+      .sort((a, b) => b.riskScore - a.riskScore)
+      .filter((facility) => !query || `${facility.name} ${facility.village} ${facility.mandal} ${facility.type}`.toLowerCase().includes(query));
+  }, [search]);
 
   return (
-    <motion.div
-      initial="initial"
-      animate="animate"
-      variants={{ animate: { transition: { staggerChildren: 0.04 } } }}
-      className="p-6 space-y-6 max-w-7xl mx-auto"
-    >
-      <section className="py-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">All PHCs & CHCs</h2>
-            <p className="text-sm text-[#a1a1aa] mt-1">
-              {facilities.length} facilities · {facilities.filter(f => f.status === "critical" || f.status === "high").length} at risk
-            </p>
-          </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a1a1aa] pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search facilities..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="premium-input pl-10"
-            />
-          </div>
+    <div className="space-y-4 p-4 md:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-label-xs uppercase tracking-widest text-outline">Facilities</p>
+          <h1 className="text-headline-md font-bold text-on-surface md:text-headline-lg">PHC / CHC Network</h1>
+          <p className="text-label-sm text-outline">Compact operational view for Visakhapatnam district.</p>
         </div>
-      </section>
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+          <input
+            type="text"
+            placeholder="Search facilities..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="w-full rounded-2xl border border-outline-variant/30 bg-white/70 py-2.5 pl-9 pr-3 text-label-md outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
+        </div>
+      </div>
 
-      <section className="py-6">
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl p-5 border border-[#e4e4e7] flex flex-col items-center text-center py-12">
-            <Building2 className="w-10 h-10 text-[#a1a1aa] mb-3" />
-            <p className="text-base font-semibold">No facilities found</p>
-            <p className="text-sm text-[#a1a1aa] mt-1">Try adjusting your search query</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filtered.map((f) => <FacilityCard key={f.id} f={f} />)}
-          </div>
-        )}
-      </section>
-    </motion.div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatChip label="Total Facilities" value={dashboardSummary.totalFacilities} icon={Building2} />
+        <StatChip label="Critical" value={dashboardSummary.criticalFacilities} icon={Activity} />
+        <StatChip label="Open Alerts" value={dashboardSummary.openAlerts} icon={Users} />
+        <StatChip label="Doctor Alerts" value={dashboardSummary.doctorAbsenceAlerts} icon={Stethoscope} />
+        <StatChip label="Bed Pressure" value={dashboardSummary.bedPressureAlerts} icon={BedDouble} />
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-white/85 p-4 shadow-[0_2px_20px_rgba(0,0,0,0.04)]">
+        <div className="mb-3">
+          <p className="text-label-xs uppercase tracking-widest text-outline">Risk Ranking</p>
+          <h2 className="text-headline-sm font-bold text-on-surface">{filtered.length} facilities visible</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto min-w-[700px]">
+            <thead>
+              <tr className="border-y border-outline-variant/10 bg-surface-container-lowest/70">
+                <th className="w-10 px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">#</th>
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Facility</th>
+                <th className="hidden px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline md:table-cell">Type</th>
+                <th className="hidden px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline lg:table-cell">Location</th>
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Risk</th>
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">OPD</th>
+                <th className="hidden px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline md:table-cell">Docs</th>
+                <th className="hidden px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline lg:table-cell">Nurses</th>
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Beds</th>
+                <th className="w-10 px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((facility, index) => <FacilityRow key={facility.id} facility={facility} rank={index + 1} />)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }

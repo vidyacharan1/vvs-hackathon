@@ -1,258 +1,151 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import {
-  Search, Eye, Plus, Sparkles, X, Users,
-  AlertTriangle, Clock, Phone, MapPin,
-  Activity, Calendar
-} from "lucide-react";
-import { patients, getFacilityName, getDoctorName, getNurseName, facilities } from "@/lib/demo-data";
+import { useMemo, useState } from "react";
+import { Eye, Plus, Search, Sparkles, X } from "lucide-react";
+import { facilities, getDoctorName, getFacilityName, getNurseName, patients } from "@/lib/demo-data";
 
-const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
-const stagger = { animate: { transition: { staggerChildren: 0.04 } } };
-
-const riskStyles: Record<string, { dot: string; bg: string; text: string; border: string }> = {
-  Critical: { dot: "bg-[#dc2626]", bg: "bg-[#fef2f2]", text: "text-[#dc2626]", border: "border-[#fecaca]" },
-  High: { dot: "bg-[#ea580c]", bg: "bg-[#fff7ed]", text: "text-[#ea580c]", border: "border-[#fed7aa]" },
-  Medium: { dot: "bg-[#ca8a04]", bg: "bg-[#fefce8]", text: "text-[#ca8a04]", border: "border-[#fef08a]" },
-  Low: { dot: "bg-[#16a34a]", bg: "bg-[#f0fdf4]", text: "text-[#16a34a]", border: "border-[#bbf7d0]" },
-};
-
-const followUpStyles: Record<string, { bg: string; text: string; icon: boolean }> = {
-  overdue: { bg: "bg-[#fef2f2]", text: "text-[#dc2626]", icon: true },
-  pending: { bg: "bg-[#fefce8]", text: "text-[#ca8a04]", icon: true },
-  completed: { bg: "bg-[#f0fdf4]", text: "text-[#16a34a]", icon: false },
-};
+function riskPill(risk: string) {
+  return risk === "Critical" ? "pill-critical" : risk === "High" ? "pill-high" : risk === "Medium" ? "pill-medium" : "pill-low";
+}
 
 export default function PatientsPage() {
   const [search, setSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [facilityFilter, setFacilityFilter] = useState("all");
 
-  const filtered = patients.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.condition.toLowerCase().includes(search.toLowerCase()) || p.village.toLowerCase().includes(search.toLowerCase());
-    const matchesFacility = facilityFilter === "all" || p.facilityId === facilityFilter;
-    return matchesSearch && matchesFacility;
-  });
+  const filtered = useMemo(() => {
+    const query = search.toLowerCase();
+    return patients.filter((patient) => {
+      const matchesSearch = `${patient.name} ${patient.condition} ${patient.village}`.toLowerCase().includes(query);
+      const matchesFacility = facilityFilter === "all" || patient.facilityId === facilityFilter;
+      return matchesSearch && matchesFacility;
+    });
+  }, [facilityFilter, search]);
 
-  const patient = selectedPatient ? patients.find((p) => p.id === selectedPatient) : null;
-
-  const stats = useMemo(() => ({
-    total: patients.length,
-    critical: patients.filter((p) => p.riskScore === "Critical").length,
-    highRisk: patients.filter((p) => p.riskScore === "High").length,
-    overdue: patients.filter((p) => p.followUpStatus === "overdue").length,
-  }), []);
+  const patient = selectedPatient ? patients.find((item) => item.id === selectedPatient) : null;
 
   return (
-    <motion.div initial="initial" animate="animate" variants={stagger} className="p-6 max-w-7xl mx-auto">
-      <div className="space-y-6">
-        <motion.div variants={fadeUp} className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Patient CRM</h1>
-            <p className="text-sm text-[#a1a1aa] mt-0.5">{patients.length} patients across all facilities</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="btn-primary"><Plus className="w-3.5 h-3.5" /> Add Patient</button>
-            <button className="btn-secondary"><Sparkles className="w-3.5 h-3.5" /> Summarize</button>
-          </div>
-        </motion.div>
-
-        <motion.div variants={fadeUp} className="grid grid-cols-4 gap-3">
-          {[
-            { label: "Total Patients", value: stats.total, icon: Users, color: "text-[#a1a1aa]" },
-            { label: "Critical", value: stats.critical, icon: AlertTriangle, color: "text-[#dc2626]" },
-            { label: "High Risk", value: stats.highRisk, icon: Activity, color: "text-[#ea580c]" },
-            { label: "Overdue", value: stats.overdue, icon: Clock, color: "text-[#dc2626]" },
-          ].map((s) => (
-            <div key={s.label} className="bg-white rounded-xl p-4 border border-[#e4e4e7]">
-              <div className={`flex items-center gap-1.5 text-xs font-medium ${s.color} mb-1`}>
-                <s.icon className="w-3.5 h-3.5" /> {s.label}
-              </div>
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            </div>
-          ))}
-        </motion.div>
-
-        <motion.div variants={fadeUp} className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a1a1aa] w-4 h-4" />
-            <input type="text" placeholder="Search by name, condition, or village..." value={search} onChange={(e) => setSearch(e.target.value)} className="premium-input pl-10" />
-          </div>
-          <select value={facilityFilter} onChange={(e) => setFacilityFilter(e.target.value)} className="premium-select">
-            <option value="all">All Facilities</option>
-            {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-          </select>
-        </motion.div>
-
-        <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-[#e4e4e7] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="premium-table">
-              <thead>
-                <tr>
-                  <th>Patient</th>
-                  <th>Age</th>
-                  <th>Gender</th>
-                  <th>Village</th>
-                  <th>Facility</th>
-                  <th>Condition</th>
-                  <th>Risk</th>
-                  <th>Follow-up</th>
-                  <th>Next Visit</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="text-center text-[#a1a1aa] py-16">
-                      <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                      <p className="text-sm font-medium">No patients match your search</p>
-                      <p className="text-xs mt-1">Try a different name, condition, or village</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((p) => (
-                    <tr key={p.id} className="cursor-pointer hover:bg-[#fafafa] transition-colors" onClick={() => setSelectedPatient(p.id)}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold ${riskStyles[p.riskScore].bg} ${riskStyles[p.riskScore].text}`}>
-                            {p.name.split(" ").map(s => s[0]).join("").slice(0, 2)}
-                          </div>
-                          <div className="leading-tight">
-                            <p className="text-sm font-medium">{p.name}</p>
-                            <p className="text-xs text-[#a1a1aa]">{p.phone}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td><span className="text-sm">{p.age}</span></td>
-                      <td><span className="text-sm">{p.gender}</span></td>
-                      <td><span className="text-sm">{p.village}</span></td>
-                      <td><span className="text-sm truncate block max-w-[130px]">{getFacilityName(p.facilityId)}</span></td>
-                      <td><span className="text-sm truncate block max-w-[140px]">{p.condition}</span></td>
-                      <td>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${riskStyles[p.riskScore].bg} ${riskStyles[p.riskScore].text} ${riskStyles[p.riskScore].border}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${riskStyles[p.riskScore].dot}`} />
-                          {p.riskScore}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${followUpStyles[p.followUpStatus].bg} ${followUpStyles[p.followUpStatus].text}`}>
-                          {followUpStyles[p.followUpStatus].icon && <AlertTriangle className="w-3 h-3" />}
-                          {p.followUpStatus}
-                        </span>
-                      </td>
-                      <td><span className="text-sm">{p.nextFollowUp}</span></td>
-                      <td><Eye className="w-4 h-4 text-[#a1a1aa] hover:text-[#6366f1] transition-colors cursor-pointer" /></td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-
-        {patient && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setSelectedPatient(null)}>
-            <div className="bg-white rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4e4e7] sticky top-0 bg-white z-10">
-                <div className="flex items-center gap-3">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-base font-bold ${riskStyles[patient.riskScore].bg} ${riskStyles[patient.riskScore].text}`}>
-                    {patient.name.split(" ").map(s => s[0]).join("").slice(0, 2)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold leading-tight">{patient.name}</h2>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border ${riskStyles[patient.riskScore].bg} ${riskStyles[patient.riskScore].text} ${riskStyles[patient.riskScore].border}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${riskStyles[patient.riskScore].dot}`} />
-                        {patient.riskScore}
-                      </span>
-                    </div>
-                    <p className="text-sm text-[#a1a1aa]">{patient.age} yrs · {patient.gender} · {patient.village}</p>
-                  </div>
-                </div>
-                <button onClick={() => setSelectedPatient(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#f4f4f5] transition-colors shrink-0"><X className="w-4 h-4" /></button>
-              </div>
-
-              <div className="p-6 space-y-5">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-3 space-y-1">
-                    <Phone className="w-4 h-4 text-[#a1a1aa]" />
-                    <p className="text-xs text-[#a1a1aa]">Phone</p>
-                    <p className="text-sm font-semibold">{patient.phone}</p>
-                  </div>
-                  <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-3 space-y-1">
-                    <MapPin className="w-4 h-4 text-[#a1a1aa]" />
-                    <p className="text-xs text-[#a1a1aa]">Facility</p>
-                    <p className="text-sm font-semibold truncate">{getFacilityName(patient.facilityId)}</p>
-                  </div>
-                  <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-3 space-y-1">
-                    <Calendar className="w-4 h-4 text-[#a1a1aa]" />
-                    <p className="text-xs text-[#a1a1aa]">Last Visit</p>
-                    <p className="text-sm font-semibold">{patient.lastVisit}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-3">
-                    <p className="text-xs text-[#a1a1aa] mb-0.5">Assigned Doctor</p>
-                    <p className="text-sm font-semibold">{getDoctorName(patient.assignedDoctorId)}</p>
-                  </div>
-                  <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-3">
-                    <p className="text-xs text-[#a1a1aa] mb-0.5">Assigned Nurse</p>
-                    <p className="text-sm font-semibold">{getNurseName(patient.assignedNurseId)}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-[#a1a1aa] uppercase tracking-widest mb-2">Conditions</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {["bg-[#eef2ff] text-[#6366f1]", "bg-[#fef2f2] text-[#dc2626]", "bg-[#fff7ed] text-[#ea580c]", "bg-[#f0fdf4] text-[#16a34a]", "bg-[#fefce8] text-[#ca8a04]", "bg-[#f5f3ff] text-[#9333ea]"].map((c, i) => (
-                      patient.conditions[i] && <span key={i} className={`rounded-lg px-3 py-1 text-xs font-medium ${c}`}>{patient.conditions[i]}</span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-[#a1a1aa] uppercase tracking-widest mb-3">Visit Status</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-4 text-center space-y-1">
-                      <p className="text-xs text-[#a1a1aa]">Next Follow-up</p>
-                      <p className="text-sm font-bold">{patient.nextFollowUp}</p>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${followUpStyles[patient.followUpStatus].bg} ${followUpStyles[patient.followUpStatus].text}`}>
-                        {patient.followUpStatus}
-                      </span>
-                    </div>
-                    <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-4 text-center space-y-1">
-                      <p className="text-xs text-[#a1a1aa]">Risk Level</p>
-                      <p className={`text-lg font-bold ${riskStyles[patient.riskScore].text}`}>{patient.riskScore}</p>
-                    </div>
-                    <div className="rounded-xl bg-[#fafafa] border border-[#e4e4e7] p-4 text-center space-y-1">
-                      <p className="text-xs text-[#a1a1aa]">Status</p>
-                      <p className={`text-lg font-bold capitalize ${followUpStyles[patient.followUpStatus].text}`}>{patient.followUpStatus}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-[#eef2ff] border border-[#6366f1]/10 p-4">
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-[#6366f1] shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-[#6366f1]">AI Assessment</p>
-                      <p className="text-sm text-[#52525b] mt-1">
-                        Patient is managing {patient.conditions.join(" and ")}. Last visit showed stable vitals. Follow-up is {patient.followUpStatus === "overdue" ? "overdue" : "scheduled"}.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <button className="btn-primary w-full justify-center"><Sparkles className="w-4 h-4" /> Generate Patient Journey Report</button>
-              </div>
-            </div>
-          </div>
-        )}
+    <div className="space-y-4 p-4 md:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-label-xs uppercase tracking-widest text-outline">CRM</p>
+          <h1 className="text-headline-md font-bold text-on-surface md:text-headline-lg">Patient CRM</h1>
+          <p className="text-label-sm text-outline">{patients.length} patients across district facilities.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="gradient-button flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold text-white">
+            <Plus className="h-4 w-4" /> Add Patient
+          </button>
+          <button className="card-glass flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-brand-purple" /> Summarize
+          </button>
+        </div>
       </div>
-    </motion.div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+          <input
+            type="text"
+            placeholder="Search name, condition, village..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="w-full rounded-2xl border border-outline-variant/30 bg-white/70 py-2.5 pl-9 pr-3 text-label-md outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
+        </div>
+        <select
+          value={facilityFilter}
+          onChange={(event) => setFacilityFilter(event.target.value)}
+          className="min-w-[190px] rounded-2xl border border-outline-variant/30 bg-white/70 px-3 py-2.5 text-label-md outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+        >
+          <option value="all">All Facilities</option>
+          {facilities.map((facility) => <option key={facility.id} value={facility.id}>{facility.name}</option>)}
+        </select>
+      </div>
+
+      <div className="card-glass overflow-hidden p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="text-label-xs uppercase tracking-widest text-outline">Patient List</p>
+            <h2 className="text-headline-sm font-bold text-on-surface">{filtered.length} visible records</h2>
+          </div>
+          <span className="rounded-full bg-brand-purple/10 px-3 py-1 text-label-xs font-bold text-brand-purple">Follow-up tracking</span>
+        </div>
+        <table className="w-full table-fixed">
+          <thead>
+            <tr className="border-y border-outline-variant/10 bg-surface-container-lowest/70">
+              <th className="px-2 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Patient</th>
+              <th className="hidden w-32 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline md:table-cell">Facility</th>
+              <th className="hidden w-32 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline lg:table-cell">Condition</th>
+              <th className="w-24 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Risk</th>
+              <th className="w-24 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Follow-up</th>
+              <th className="hidden w-28 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-outline sm:table-cell">Next Visit</th>
+              <th className="w-9 px-2 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((item) => (
+              <tr key={item.id} onClick={() => setSelectedPatient(item.id)} className="cursor-pointer border-b border-outline-variant/10 transition hover:bg-brand-purple/5">
+                <td className="min-w-0 px-2 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-purple/10 text-[11px] font-bold text-brand-purple">{item.avatar}</div>
+                    <div className="min-w-0">
+                      <p className="truncate text-label-md font-bold text-on-surface">{item.name}</p>
+                      <p className="truncate text-[11px] text-outline">{item.age} yrs, {item.gender} - {item.village}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="hidden px-2 py-2.5 text-label-sm text-outline md:table-cell"><span className="line-clamp-1">{getFacilityName(item.facilityId)}</span></td>
+                <td className="hidden px-2 py-2.5 text-label-sm text-on-surface lg:table-cell"><span className="line-clamp-1">{item.condition}</span></td>
+                <td className="px-2 py-2.5"><span className={`pill ${riskPill(item.riskScore)}`}>{item.riskScore}</span></td>
+                <td className="px-2 py-2.5"><span className={`pill ${item.followUpStatus === "completed" ? "pill-low" : item.followUpStatus === "overdue" ? "pill-critical" : "pill-medium"}`}>{item.followUpStatus}</span></td>
+                <td className="hidden px-2 py-2.5 text-label-sm text-outline sm:table-cell">{item.nextFollowUp}</td>
+                <td className="px-2 py-2.5"><Eye className="h-4 w-4 text-outline" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {patient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" onClick={() => setSelectedPatient(null)}>
+          <div className="card-glass max-h-[88vh] w-full max-w-xl overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-outline-variant/10 px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-purple/10 text-sm font-bold text-brand-purple">{patient.avatar}</div>
+                <div className="min-w-0">
+                  <h2 className="truncate text-headline-sm font-bold">{patient.name}</h2>
+                  <p className="text-label-xs text-outline">{patient.age} yrs - {patient.gender} - {patient.village}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedPatient(null)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-container-high"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-4 px-5 py-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="card-glass p-3"><p className="text-label-xs text-outline">Facility</p><p className="mt-0.5 text-label-md font-bold">{getFacilityName(patient.facilityId)}</p></div>
+                <div className="card-glass p-3"><p className="text-label-xs text-outline">Assigned Doctor</p><p className="mt-0.5 text-label-md font-bold">{getDoctorName(patient.assignedDoctorId)}</p></div>
+                <div className="card-glass p-3"><p className="text-label-xs text-outline">Assigned Nurse</p><p className="mt-0.5 text-label-md font-bold">{getNurseName(patient.assignedNurseId)}</p></div>
+                <div className="card-glass p-3"><p className="text-label-xs text-outline">Phone</p><p className="mt-0.5 text-label-md font-bold">{patient.phone}</p></div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {patient.conditions.map((condition) => <span key={condition} className="rounded-xl bg-brand-purple/10 px-2.5 py-1 text-label-xs font-bold text-brand-purple">{condition}</span>)}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="card-glass p-3 text-center"><p className="text-label-xs text-outline">Risk</p><span className={`pill mt-1 ${riskPill(patient.riskScore)}`}>{patient.riskScore}</span></div>
+                <div className="card-glass p-3 text-center"><p className="text-label-xs text-outline">Last Visit</p><p className="mt-1 text-label-sm font-bold">{patient.lastVisit}</p></div>
+                <div className="card-glass p-3 text-center"><p className="text-label-xs text-outline">Next Visit</p><p className="mt-1 text-label-sm font-bold">{patient.nextFollowUp}</p></div>
+              </div>
+              <div className="flex gap-2 rounded-2xl border border-brand-purple/10 bg-brand-purple/5 p-3">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand-purple" />
+                <p className="text-label-sm text-outline">AI Summary: {patient.condition}. Follow-up is {patient.followUpStatus}; route through assigned nurse if home visit remains pending.</p>
+              </div>
+              <button className="gradient-button flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-label-md font-semibold text-white">
+                <Sparkles className="h-4 w-4" /> Summarize Patient Journey
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

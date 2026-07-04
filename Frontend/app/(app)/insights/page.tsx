@@ -1,94 +1,117 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { AlertTriangle, CheckCircle, Copy } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle, Copy, Sparkles } from "lucide-react";
 import { aiInsights, getFacilityName } from "@/lib/demo-data";
+import type { FacilityStatus } from "@/lib/demo-data";
 
-const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
-const stagger = { animate: { transition: { staggerChildren: 0.04 } } };
-
-const severityColors: Record<string, { accent: string; iconBg: string; iconText: string }> = {
-  critical: { accent: "border-l-[#ef4444]", iconBg: "bg-[#fef2f2]", iconText: "text-[#ef4444]" },
-  high: { accent: "border-l-[#f59e0b]", iconBg: "bg-[#fffbeb]", iconText: "text-[#f59e0b]" },
-  medium: { accent: "border-l-[#ca8a04]", iconBg: "bg-[#fefce8]", iconText: "text-[#ca8a04]" },
-  low: { accent: "border-l-[#10b981]", iconBg: "bg-[#f0fdf4]", iconText: "text-[#10b981]" },
+const statusPillClass: Record<string, string> = {
+  open: "pill pill-critical",
+  acknowledged: "pill pill-medium",
+  resolved: "pill pill-low",
 };
 
-const statusStyles: Record<string, string> = {
-  open: "bg-[#fef2f2] text-[#ef4444]",
-  acknowledged: "bg-[#fefce8] text-[#ca8a04]",
-  resolved: "bg-[#f0fdf4] text-[#10b981]",
-};
+const filters = ["all", "critical", "high", "medium", "low"];
 
 export default function InsightsPage() {
   const [filter, setFilter] = useState("all");
-
-  const filtered = filter === "all" ? aiInsights : aiInsights.filter((i) => i.severity === filter);
+  const filtered = useMemo(() => filter === "all" ? aiInsights : aiInsights.filter((item) => item.severity === filter), [filter]);
+  const openCount = aiInsights.filter((item) => item.status === "open").length;
 
   return (
-    <motion.div className="p-6 space-y-6 max-w-7xl mx-auto" initial="initial" animate="animate" variants={stagger}>
-      <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="space-y-4 p-4 md:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">AI Insights Board</h2>
-          <p className="text-sm text-[#a1a1aa] mt-1">{aiInsights.length} insights &middot; {aiInsights.filter((i) => i.status === "open").length} open</p>
+          <p className="text-label-xs uppercase tracking-widest text-outline">AI</p>
+          <h1 className="text-headline-md font-bold text-on-surface md:text-headline-lg">AI Insights Board</h1>
+          <p className="text-label-sm text-outline">{aiInsights.length} insights, {openCount} open alerts.</p>
         </div>
-        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#f4f4f5]">
-          {["all", "critical", "high", "medium", "low"].map((f) => (
+        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-outline-variant/20 bg-white/60 p-1.5">
+          {filters.map((item) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize ${
-                filter === f ? "bg-white text-[#18181b] shadow-sm" : "text-[#a1a1aa] hover:text-[#52525b]"
-              }`}
+              key={item}
+              onClick={() => setFilter(item)}
+              className={`rounded-xl px-3 py-1.5 text-label-xs font-bold capitalize transition ${filter === item ? "bg-brand-purple text-white shadow-lg shadow-brand-purple/20" : "text-outline hover:bg-brand-purple/10 hover:text-brand-purple"}`}
             >
-              {f === "all" ? "All" : f}
+              {item}
             </button>
           ))}
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filtered.map((insight) => {
-          const colors = severityColors[insight.severity] || severityColors.low;
-          return (
-            <div
-              key={insight.id}
-              className={`bg-white rounded-2xl p-5 border border-[#e4e4e7] border-l-4 ${colors.accent}`}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl ${colors.iconBg} ${colors.iconText} flex items-center justify-center`}>
-                    <AlertTriangle className="w-5 h-5" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          ["Critical", aiInsights.filter((item) => item.severity === "critical").length, "text-error"],
+          ["High", aiInsights.filter((item) => item.severity === "high").length, "text-orange-600"],
+          ["Open", openCount, "text-warning"],
+          ["Resolved", aiInsights.filter((item) => item.status === "resolved").length, "text-success"],
+        ].map(([label, value, color]) => (
+          <div key={label} className="card-glass p-3">
+            <p className="text-label-xs uppercase tracking-widest text-outline">{label}</p>
+            <p className={`mt-1 text-2xl font-bold leading-none ${color}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
+        <div className="grid min-w-0 gap-3 md:grid-cols-2">
+          {filtered.map((insight) => (
+            <div key={insight.id} className={`card-glass min-w-0 border-l-4 p-4 ${insight.severity === "critical" ? "border-l-error" : insight.severity === "high" ? "border-l-orange-500" : insight.severity === "medium" ? "border-l-warning" : "border-l-success"}`}>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-brand-purple/10">
+                    <AlertTriangle className="h-4 w-4 text-brand-purple" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#18181b]">{insight.type}</span>
-                      <span className={`badge-${insight.severity}`}>{insight.severity.charAt(0).toUpperCase() + insight.severity.slice(1)}</span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-label-md font-bold text-on-surface">{insight.type}</p>
+                      <span className={`pill pill-${insight.severity as FacilityStatus}`}>{insight.severity}</span>
                     </div>
-                    <p className="text-xs text-[#a1a1aa] mt-0.5">
-                      {getFacilityName(insight.facilityId)} &middot; {new Date(insight.createdAt).toLocaleString()}
-                    </p>
+                    <p className="truncate text-[11px] text-outline">{getFacilityName(insight.facilityId)} - {insight.timestamp}</p>
                   </div>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${statusStyles[insight.status] || ""}`}>
-                  {insight.status.charAt(0).toUpperCase() + insight.status.slice(1)}
-                </span>
+                <span className={statusPillClass[insight.status]}>{insight.status}</span>
               </div>
-              <p className="text-sm text-[#52525b] mb-4 leading-relaxed">{insight.summary}</p>
-              <div className="rounded-xl bg-[#eef2ff]/50 border border-[#6366f1]/10 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6366f1] mb-1">Recommended Action</p>
-                <p className="text-sm text-[#18181b]">{insight.recommendation}</p>
+              <p className="line-clamp-2 text-label-sm leading-5 text-on-surface">{insight.summary}</p>
+              <div className="mt-3 rounded-2xl border border-brand-purple/10 bg-brand-purple/5 p-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-outline">Recommended Action</p>
+                <p className="line-clamp-2 text-label-sm text-brand-purple">{insight.recommendation}</p>
               </div>
-              <div className="flex items-center gap-2 mt-4">
-                <button className="btn-secondary inline-flex items-center gap-1.5 text-xs"><CheckCircle className="w-3.5 h-3.5" /> Acknowledge</button>
-                <button className="btn-secondary inline-flex items-center gap-1.5 text-xs"><CheckCircle className="w-3.5 h-3.5" /> Resolve</button>
-                <button className="btn-secondary inline-flex items-center gap-1.5 text-xs"><Copy className="w-3.5 h-3.5" /> Copy</button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-2.5 py-1.5 text-label-xs font-bold hover:bg-brand-purple hover:text-white"><CheckCircle className="h-3.5 w-3.5" /> Acknowledge</button>
+                <button className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-2.5 py-1.5 text-label-xs font-bold hover:bg-brand-purple hover:text-white"><CheckCircle className="h-3.5 w-3.5" /> Resolve</button>
+                <button className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-2.5 py-1.5 text-label-xs font-bold hover:bg-brand-purple hover:text-white"><Copy className="h-3.5 w-3.5" /> Copy</button>
               </div>
             </div>
-          );
-        })}
-      </motion.div>
-    </motion.div>
+          ))}
+        </div>
+
+        <aside className="card-glass p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-purple/10">
+              <Sparkles className="h-4 w-4 text-brand-purple" />
+            </div>
+            <div>
+              <h2 className="text-headline-sm font-bold text-on-surface">District Brief Queue</h2>
+              <p className="text-label-xs text-outline">Top AI narrative for officers</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {aiInsights.slice(0, 4).map((item) => (
+              <div key={item.id} className="rounded-2xl border border-outline-variant/20 bg-white/70 p-2.5">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="truncate text-label-sm font-bold text-on-surface">{item.category}</p>
+                  <span className={`pill pill-${item.severity}`}>{item.severity}</span>
+                </div>
+                <p className="line-clamp-2 text-[11px] leading-4 text-outline">{item.message}</p>
+              </div>
+            ))}
+          </div>
+          <button className="gradient-button mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-label-md font-semibold text-white">
+            <Sparkles className="h-4 w-4" /> Generate District Brief
+          </button>
+        </aside>
+      </div>
+    </div>
   );
 }

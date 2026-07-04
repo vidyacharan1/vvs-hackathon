@@ -61,7 +61,7 @@ function NavBar() {
     <nav className="sticky top-0 z-50 border-b border-outline-variant/30 bg-surface/80 backdrop-blur-md shadow-sm">
       <div className="flex justify-between items-center w-full px-4 md:px-10 py-4 max-w-7xl mx-auto">
         <div className="flex items-center h-10">
-          <Image src="/logo.png" alt="Arogyam" width={140} height={38} className="object-contain" priority />
+          <Image src="/logo.png" alt="Arogyam" width={140} height={35} className="object-contain" priority />
         </div>
         <div className="hidden md:flex items-center space-x-8">
           <a className="text-primary font-bold border-b-2 border-primary pb-1 text-label-md" href="#features">Features</a>
@@ -129,6 +129,7 @@ function HeroSection() {
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnJdmDxOeWtSX1hVhMWd2IcQs57luhE_SMmlU04uIbbnFK2QqNysydD7Z8-9NhpW0gCyxZfUuaadGpnBsiv4d6U4kqR0NcVg9SuPZsBDBgY2qqWKTwAWS1JJ8iVt7rMU1gGWmsZ2PmTOGyPyTtzQyu3nbJneYLvNTkkeYfAmbT5HSiflacBTlbR0fNsjrPCfxTVkbBwqwEcXO1ZnFipGCp2ejPYUTvXFGEWBAUKrrq6cSa4oHwFXK2TA"
               width={600}
               height={400}
+              priority
             />
           </div>
         </div>
@@ -405,7 +406,7 @@ function FooterSection() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-4 md:px-10 max-w-7xl mx-auto">
         <div>
           <div className="h-[28px] flex items-center mb-6">
-            <Image src="/logo.png" alt="Arogyam" width={140} height={38} className="object-contain brightness-0 invert" priority />
+            <Image src="/logo.png" alt="Arogyam" width={140} height={35} className="object-contain brightness-0 invert" priority />
           </div>
           <p className="text-surface-container-highest/70 text-body-md pr-8">
             AI-powered healthcare management system for smarter public health operations and better outcomes.

@@ -1,300 +1,547 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import type { ElementType } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/app-context";
-import { motion } from "framer-motion";
 import {
-  Building2, AlertTriangle, Pill, Users,
-  Plus, Sparkles, ChevronRight,
-  MapPin, Activity, ArrowUp, ArrowDown,
-  X, HeartPulse, Thermometer, Stethoscope
+  Activity,
+  AlertTriangle,
+  BedDouble,
+  Building2,
+  ChevronRight,
+  Clock,
+  Download,
+  Pill,
+  Plus,
+  ShieldAlert,
+  Sparkles,
+  Stethoscope,
+  TrendingUp,
+  Users,
+  X,
 } from "lucide-react";
 import {
-  AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
-import { dashboardSummary, facilities, healthTrends } from "@/lib/demo-data";
-import type { Facility } from "@/lib/demo-data";
+import { aiInsights, dashboardSummary, diseaseSpikes, facilities, medicines } from "@/lib/demo-data";
+import type { Facility, FacilityStatus } from "@/lib/demo-data";
 
-const fadeUp = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
+const riskLabel: Record<FacilityStatus, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
 };
 
-const stagger = {
-  animate: { transition: { staggerChildren: 0.04 } },
+const riskDot: Record<FacilityStatus, string> = {
+  critical: "#dc2626",
+  high: "#ea580c",
+  medium: "#d97706",
+  low: "#16a34a",
 };
 
-const statusDot = (s: string) => {
-  const m: Record<string, string> = { critical: "bg-[#ef4444]", high: "bg-[#f59e0b]", medium: "bg-[#ca8a04]", low: "bg-[#10b981]" };
-  return m[s] || "bg-[#a1a1aa]";
+const metricCards = [
+  { label: "Facilities", value: dashboardSummary.totalFacilities, trend: "+12%", icon: Building2, tone: "good" },
+  { label: "Stock Alerts", value: dashboardSummary.medicineStockIssues, trend: "+8%", icon: Pill, tone: "danger" },
+  { label: "Disease Spikes", value: dashboardSummary.diseaseSpikeAlerts, trend: "+4", icon: Activity, tone: "danger" },
+  { label: "High-risk", value: dashboardSummary.criticalPatients, trend: "live", icon: Users, tone: "good" },
+  { label: "Bed Pressure", value: "56%", trend: "+9%", icon: BedDouble, tone: "warning" },
+];
+
+const quickActions = [
+  { label: "Facilities", icon: Building2, href: "/facilities" },
+  { label: "AI Brief", icon: Sparkles, href: "/insights" },
+  { label: "Trends", icon: TrendingUp, href: "/disease-trends" },
+  { label: "Export", icon: Download, href: "/dashboard" },
+];
+
+const diseaseTrendData = [
+  { day: "D-6", dengue: 11, malaria: 6, typhoid: 8 },
+  { day: "D-5", dengue: 14, malaria: 7, typhoid: 8 },
+  { day: "D-4", dengue: 16, malaria: 8, typhoid: 10 },
+  { day: "D-3", dengue: 19, malaria: 8, typhoid: 12 },
+  { day: "D-2", dengue: 23, malaria: 9, typhoid: 14 },
+  { day: "D-1", dengue: 25, malaria: 11, typhoid: 15 },
+  { day: "Today", dengue: 31, malaria: 12, typhoid: 18 },
+];
+
+const medicineSeverity = [
+  { facility: "Madhur.", high: 2, medium: 1, low: 0, total: 3 },
+  { facility: "Bheem.", high: 2, medium: 1, low: 1, total: 4 },
+  { facility: "Gaju.", high: 0, medium: 2, low: 0, total: 2 },
+  { facility: "Pendur.", high: 0, medium: 1, low: 1, total: 2 },
+  { facility: "Narsi.", high: 0, medium: 0, low: 2, total: 2 },
+];
+
+const toneStyles: Record<string, { badge: string; icon: string; glow: string }> = {
+  good: {
+    badge: "bg-success/10 text-success border-success/20",
+    icon: "bg-success/10 text-success",
+    glow: "shadow-success/5",
+  },
+  warning: {
+    badge: "bg-warning/10 text-warning border-warning/20",
+    icon: "bg-warning/10 text-warning",
+    glow: "shadow-warning/5",
+  },
+  danger: {
+    badge: "bg-error/10 text-error border-error/20",
+    icon: "bg-error/10 text-error",
+    glow: "shadow-error/5",
+  },
 };
 
-/* ─── Mini Sparkline ─── */
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const points = data.map((v, i) => `${i * 20},${30 - v * 0.6}`).join(" ");
+function riskFromValue(value: number): FacilityStatus {
+  if (value >= 85) return "critical";
+  if (value >= 70) return "high";
+  if (value >= 45) return "medium";
+  return "low";
+}
+
+function stockRisk(facility: Facility): FacilityStatus {
+  if (facility.medicineStockIssues >= 4) return "critical";
+  if (facility.medicineStockIssues >= 3) return "high";
+  if (facility.medicineStockIssues >= 1) return "medium";
+  return "low";
+}
+
+function spikeRisk(facility: Facility): FacilityStatus {
+  if (facility.diseaseSpikeRisk >= 80) return "critical";
+  if (facility.diseaseSpikeRisk >= 55) return "high";
+  if (facility.diseaseSpikeRisk >= 30) return "medium";
+  return "low";
+}
+
+function RiskBadge({ value }: { value: FacilityStatus }) {
+  return <span className={`pill pill-${value}`}>{riskLabel[value]}</span>;
+}
+
+function MetricCard({ label, value, trend, icon: Icon, tone }: { label: string; value: string | number; trend: string; icon: ElementType; tone: string }) {
+  const styles = toneStyles[tone];
+
   return (
-    <svg viewBox="0 0 100 30" className="w-full h-8">
-      <polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={points} />
-    </svg>
+    <div className={`card-glass flex flex-col p-3.5 ${styles.glow}`}>
+      <div className="mb-2 flex items-center justify-between">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${styles.icon}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${styles.badge}`}>{trend}</span>
+      </div>
+      <div className="mt-auto">
+        <p className="text-xl font-bold leading-none tracking-tight text-on-surface">{value}</p>
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-outline">{label}</p>
+      </div>
+    </div>
   );
 }
 
-/* ─── Premium KPI Card ─── */
-function MetricCard({
-  label, value, icon: Icon, trend, color, chart, detail,
-}: {
-  label: string; value: string | number; icon: React.ElementType;
-  trend?: number; color: string; chart?: number[]; detail?: string;
-}) {
+function CircleProgress({ value }: { value: number }) {
+  const stroke = value >= 85 ? riskDot.critical : value >= 70 ? riskDot.high : value >= 45 ? riskDot.medium : riskDot.low;
+
   return (
-    <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-[#e4e4e7] hover:shadow-lg hover:shadow-black/5 transition-all duration-200 hover:-translate-y-0.5">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
-          <Icon className="w-4.5 h-4.5" />
-        </div>
-        {trend !== undefined && (
-          <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-md ${trend >= 0 ? "bg-[#f0fdf4] text-[#16a34a]" : "bg-[#fef2f2] text-[#dc2626]"}`}>
-            {trend >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-            {Math.abs(trend)}%
+    <div className="relative h-7 w-7 shrink-0">
+      <svg viewBox="0 0 36 36" className="-rotate-90">
+        <path d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 0 1 0-31" fill="none" stroke="#e4e8f7" strokeWidth="3" />
+        <path d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 0 1 0-31" fill="none" stroke={stroke} strokeWidth="3" strokeLinecap="round" pathLength="100" strokeDasharray={`${Math.min(value, 100)} 100`} />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-on-surface">{value}</span>
+    </div>
+  );
+}
+
+function CriticalAlertBanner({ facility, onActionPlan }: { facility: Facility; onActionPlan: () => void }) {
+  return (
+    <section className="relative overflow-hidden rounded-2xl border border-error/20 bg-gradient-to-r from-error/5 via-error/8 to-error/5 p-4">
+      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-error/5" />
+      <div className="relative flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-error/10">
+            <ShieldAlert className="h-5 w-5 text-error" />
           </div>
-        )}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-error">Critical</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-error animate-pulse-dot" />
+            </div>
+            <p className="text-label-md font-bold text-on-surface">{facility.name}</p>
+            <div className="mt-1 flex items-center gap-3 text-[10px] text-outline">
+              <span>{facility.bedOccupancyRate}% beds</span>
+              <span className="h-0.5 w-0.5 rounded-full bg-outline" />
+              <span>{facility.criticalPatients} critical</span>
+              <span className="h-0.5 w-0.5 rounded-full bg-outline" />
+              <span>{facility.openAlerts} alerts</span>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onActionPlan}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-error px-4 py-2 text-[12px] font-bold text-white shadow-md shadow-error/20 transition hover:bg-error/90"
+        >
+          <AlertTriangle className="h-3.5 w-3.5" /> Action Plan
+        </button>
       </div>
-      <div className="text-2xl font-bold tracking-tight mb-0.5">{value}</div>
-      <div className="text-xs text-[#a1a1aa] font-medium">{label}</div>
-      {chart && <div className="mt-2 opacity-60"><Sparkline data={chart} color={color.includes("accent") ? "#6366f1" : "#a1a1aa"} /></div>}
-      {detail && <div className="mt-2 text-[11px] text-[#a1a1aa]">{detail}</div>}
-    </motion.div>
+    </section>
   );
 }
 
-/* ─── Facility Row ─── */
-function FacilityRow({ f, rank }: { f: Facility; rank: number }) {
-  return (
-    <Link href={`/facilities/${f.id}`} className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-[#f4f4f5] transition-colors group">
-      <span className="w-5 text-xs font-semibold text-[#a1a1aa]">{rank}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className={`w-1.5 h-1.5 rounded-full ${statusDot(f.status)}`} />
-          <span className="text-sm font-medium truncate">{f.name}</span>
-          <span className="text-[11px] text-[#a1a1aa]">{f.type}</span>
-        </div>
-        <p className="text-xs text-[#a1a1aa] flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" />{f.village}</p>
-      </div>
-      <div className="hidden sm:flex items-center gap-5">
-        <div className="text-right"><p className="text-xs text-[#a1a1aa]">OPD</p><p className="text-sm font-semibold">{f.todayOpd}</p></div>
-        <div className="text-right"><p className="text-xs text-[#a1a1aa]">Doctors</p><p className="text-sm font-semibold">{f.doctorsPresent}/{f.totalDoctors}</p></div>
-        <div className="text-right"><p className="text-xs text-[#a1a1aa]">Beds</p><p className="text-sm font-semibold">{f.bedsOccupied}/{f.totalBeds}</p></div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className={`text-sm font-bold px-2 py-0.5 rounded-md ${
-          f.riskScore >= 70 ? "text-[#dc2626] bg-[#fef2f2]" : f.riskScore >= 40 ? "text-[#ea580c] bg-[#fff7ed]" : "text-[#16a34a] bg-[#f0fdf4]"
-        }`}>
-          {f.riskScore}%
-        </div>
-        <ChevronRight className="w-4 h-4 text-[#d4d4d8] group-hover:text-[#6366f1] transition-colors" />
-      </div>
-    </Link>
-  );
-}
-
-/* ─── Main Dashboard ─── */
-export default function DashboardPage() {
-  const { role, simulationMode } = useApp();
-  const [showCreate, setShowCreate] = useState(false);
-  const isDistrictOfficer = role === "district_officer";
-
-  const sortedFacilities = useMemo(() => [...facilities].sort((a, b) => b.riskScore - a.riskScore), []);
-
-  const pieData = useMemo(() => [
-    { name: "Critical", value: dashboardSummary.criticalFacilities, color: "#ef4444" },
-    { name: "High", value: dashboardSummary.highFacilities, color: "#f59e0b" },
-    { name: "Medium", value: dashboardSummary.mediumFacilities, color: "#ca8a04" },
-    { name: "Low", value: dashboardSummary.lowFacilities, color: "#10b981" },
-  ], []);
-
-  const bedData = useMemo(() => [
-    { name: "Occupied", value: dashboardSummary.occupiedBeds, color: "#6366f1" },
-    { name: "Available", value: dashboardSummary.totalBeds - dashboardSummary.occupiedBeds, color: "#e4e4e7" },
-  ], []);
-
-  const alerts = [
-    { facility: "PHC Madhurawada", alert: "Paracetamol stock critical — 2.2 days remaining", severity: "critical" },
-    { facility: "PHC Madhurawada", alert: "Fever cases up 104% week-over-week", severity: "critical" },
-    { facility: "PHC Gajuwaka", alert: "Dr. Meera Iyer absent — zero pediatric coverage", severity: "critical" },
-    { facility: "CHC Bheemili", alert: "Diarrhea cases up 73% — ORS demand increasing", severity: "high" },
-    { facility: "PHC Madhurawada", alert: "Sr. Mary D. overloaded — 38 patients, 14 pending", severity: "high" },
+function ActionPlanModal({ facility, onClose }: { facility: Facility; onClose: () => void }) {
+  const actions = [
+    { step: "1", title: "Divert Critical Patients", desc: `Route ${facility.criticalPatients} patients to CHC Bheemunipatnam`, icon: Users, urgency: "immediate" as const },
+    { step: "2", title: "Deploy Doctors", desc: `Send 2 doctors — only ${facility.doctorsPresent}/${facility.totalDoctors} present`, icon: Stethoscope, urgency: "immediate" as const },
+    { step: "3", title: "Stock Transfer", desc: `Move Paracetamol & ORS from Pendurthi buffer`, icon: Pill, urgency: "today" as const },
+    { step: "4", title: "Overflow Protocol", desc: `Open field triage at ${facility.bedOccupancyRate}% occupancy`, icon: BedDouble, urgency: "today" as const },
+    { step: "5", title: "Spike Response", desc: `Deploy nurses for fever surveillance in ${facility.village}`, icon: Activity, urgency: "within48h" as const },
   ];
 
+  const urgencyColor = {
+    immediate: "bg-error/10 text-error border-error/20",
+    today: "bg-warning/10 text-warning border-warning/20",
+    within48h: "bg-success/10 text-success border-success/20",
+  };
+
+  const urgencyLabel = { immediate: "Now", today: "Today", within48h: "48h" };
+
   return (
-    <motion.div initial="initial" animate="animate" className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* ─── Header ─── */}
-      <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-[#a1a1aa] mt-0.5">
-            {simulationMode === "tomorrow" ? "Simulating tomorrow" : `${dashboardSummary.totalFacilities} facilities · ${dashboardSummary.totalPatients} patients`}
-          </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="card-glass max-h-[85vh] w-full max-w-xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-outline-variant/10 bg-white/90 px-5 py-3 backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="h-5 w-5 text-error" />
+            <div>
+              <h2 className="text-label-md font-bold">Action Plan</h2>
+              <p className="text-[10px] text-outline">{facility.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-container-high">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5">
+          <div className="mb-4 rounded-xl border border-outline-variant/15 bg-surface-container-low/50 p-3">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-outline">AI Recommendation</p>
+            <p className="mt-1 text-label-sm leading-4 text-on-surface">Immediate intervention required within 2 hours.</p>
+          </div>
+
+          <div className="space-y-2">
+            {actions.map((a) => {
+              const Icon = a.icon;
+              return (
+                <div key={a.step} className="flex items-center gap-3 rounded-xl border border-outline-variant/10 bg-white/50 px-3 py-2.5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-purple/8">
+                    <Icon className="h-3.5 w-3.5 text-brand-purple" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-label-sm font-bold text-on-surface">{a.title}</span>
+                      <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${urgencyColor[a.urgency]}`}>{urgencyLabel[a.urgency]}</span>
+                    </div>
+                    <p className="text-[11px] text-outline truncate">{a.desc}</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-outline">{a.step}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 flex gap-2 border-t border-outline-variant/10 bg-white/90 px-5 py-3 backdrop-blur-md">
+          <button onClick={onClose} className="flex-1 rounded-xl border border-outline-variant/30 py-2 text-label-sm font-semibold hover:bg-surface-container-high">Dismiss</button>
+          <button className="gradient-button flex-1 rounded-xl py-2 text-label-sm font-bold text-white">Execute</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HeroPanel({ onCreate, canCreate }: { onCreate: () => void; canCreate: boolean }) {
+  return (
+    <section className="relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#ffffff_0%,#f7f8ff_50%,#eee9ff_100%)] border border-outline-variant/30 px-5 py-4 md:px-6">
+      <div className="absolute right-6 top-1/2 hidden -translate-y-1/2 text-brand-purple/8 xl:block">
+        <Building2 className="h-16 w-16" />
+      </div>
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-headline-sm font-bold text-on-surface">Dashboard</h1>
+          <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
+            <span className="h-1 w-1 rounded-full bg-success animate-pulse-dot" /> Live
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          {isDistrictOfficer && (
-            <button onClick={() => setShowCreate(true)} className="btn-primary">
-              <Plus className="w-3.5 h-3.5" /> New Facility
+          {canCreate && (
+            <button onClick={onCreate} className="gradient-button flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[12px] font-bold text-white shadow-md shadow-brand-purple/20">
+              <Plus className="h-3.5 w-3.5" /> New PHC
             </button>
           )}
-          <button className="btn-secondary"><Sparkles className="w-3.5 h-3.5" /> Brief</button>
+          <button className="flex items-center gap-1.5 rounded-lg border border-outline-variant/25 bg-white/85 px-3.5 py-1.5 text-[12px] font-bold text-on-surface transition hover:border-brand-purple/30 hover:text-brand-purple">
+            <Sparkles className="h-3.5 w-3.5 text-brand-purple" /> Brief
+          </button>
         </div>
-      </motion.div>
+      </div>
+    </section>
+  );
+}
 
-      {/* ─── KPI Grid ─── */}
-      <motion.div variants={stagger} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Facilities" value={dashboardSummary.totalFacilities} icon={Building2} color="bg-[#eef2ff] text-[#6366f1]" chart={[4, 6, 5, 7, 6, 8, 7, 9, 8, 10, 9, 12]} detail="+2 this quarter" />
-        <MetricCard label="Critical Facilities" value={dashboardSummary.criticalFacilities} icon={AlertTriangle} color="bg-[#fef2f2] text-[#dc2626]" trend={25} />
-        <MetricCard label="Medicine Alerts" value={dashboardSummary.medicineStockIssues} icon={Pill} color="bg-[#fff7ed] text-[#ea580c]" trend={-12} chart={[3, 5, 4, 6, 5, 7, 6, 8, 7, 6, 5, 4]} />
-        <MetricCard label="High-risk Patients" value={dashboardSummary.criticalPatients} icon={HeartPulse} color="bg-[#fef2f2] text-[#dc2626]" trend={8} />
-        <MetricCard label="Doctor Absences" value={dashboardSummary.doctorAbsenceAlerts} icon={Stethoscope} color="bg-[#fff7ed] text-[#ea580c]" trend={-5} detail="3 present today" />
-        <MetricCard label="Nurse Overloads" value={dashboardSummary.nurseOverloadAlerts} icon={Users} color="bg-[#fefce8] text-[#ca8a04]" trend={10} />
-        <MetricCard label="Disease Spikes" value={dashboardSummary.diseaseSpikeAlerts} icon={Thermometer} color="bg-[#fef2f2] text-[#dc2626]" trend={104} />
-        <MetricCard label="Bed Pressure" value={`${dashboardSummary.bedPressureAlerts}`} icon={Activity} color="bg-[#fff7ed] text-[#ea580c]" chart={[60, 65, 62, 70, 68, 72, 75, 78, 76, 74, 73, 71]} detail={`${dashboardSummary.occupiedBeds}/${dashboardSummary.totalBeds} filled`} />
-      </motion.div>
+function FacilityRiskTable({ facilities: rankedFacilities }: { facilities: Facility[] }) {
+  return (
+    <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-outline-variant/30 bg-white/85 p-4 shadow-[0_2px_20px_rgba(0,0,0,0.04)]">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-label-md font-bold text-on-surface">Risk Ranking</h2>
+        <div className="flex gap-1">
+          {(["critical", "high", "medium", "low"] as FacilityStatus[]).map((s) => (
+            <span key={s} className={`pill pill-${s}`}>{riskLabel[s]}</span>
+          ))}
+        </div>
+      </div>
+      <div className="overflow-hidden">
+        <table className="w-full table-auto">
+          <thead>
+            <tr className="border-y border-outline-variant/10 bg-surface-container-lowest/70">
+              <th className="w-8 px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-outline">#</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Facility</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Risk</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-outline">OPD</th>
+              <th className="hidden px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-outline lg:table-cell">Med</th>
+              <th className="hidden px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-outline xl:table-cell">Disease</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-outline">Beds</th>
+              <th className="w-8 px-2 py-1.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {rankedFacilities.map((facility, index) => (
+              <tr key={facility.id} className="border-b border-outline-variant/5 transition hover:bg-brand-purple/5">
+                <td className="px-2 py-2 text-[11px] font-bold text-outline">{index + 1}</td>
+                <td className="min-w-0 px-2 py-2">
+                  <Link href={`/facilities/${facility.id}`} className="block min-w-0">
+                    <p className="truncate text-[13px] font-bold text-on-surface">{facility.name}</p>
+                    <p className="truncate text-[9px] text-outline">{facility.village}</p>
+                  </Link>
+                </td>
+                <td className="px-2 py-2"><RiskBadge value={riskFromValue(facility.riskScore)} /></td>
+                <td className="px-2 py-2 text-[13px] font-bold text-on-surface">{facility.todayOpd}</td>
+                <td className="hidden px-2 py-2 lg:table-cell"><RiskBadge value={stockRisk(facility)} /></td>
+                <td className="hidden px-2 py-2 xl:table-cell"><RiskBadge value={spikeRisk(facility)} /></td>
+                <td className="px-2 py-2"><CircleProgress value={facility.bedOccupancyRate} /></td>
+                <td className="px-2 py-2">
+                  <Link href={`/facilities/${facility.id}`} className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-purple/10 text-brand-purple transition hover:bg-brand-purple hover:text-white">
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
 
-      {/* ─── Charts Row ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Disease Trend Chart */}
-        <motion.div variants={fadeUp} className="lg:col-span-2 bg-white rounded-2xl p-5 border border-[#e4e4e7]">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-semibold">Disease Trends</h2>
-              <p className="text-xs text-[#a1a1aa]">7-month rolling view</p>
+function AIDistrictBrief() {
+  const topMed = medicines.filter((m) => m.risk === "critical" || m.risk === "high")[0];
+  const spikes = diseaseSpikes[1];
+
+  return (
+    <section className="card-glass flex flex-col overflow-hidden p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-brand-purple" />
+          <h2 className="text-label-md font-bold text-on-surface">AI Brief</h2>
+        </div>
+        <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
+          <span className="h-1 w-1 rounded-full bg-success animate-pulse-dot" /> Live
+        </span>
+      </div>
+
+      <div className="mb-3 space-y-1.5">
+        {aiInsights.slice(0, 2).map((insight) => (
+          <div key={insight.id} className="flex items-center gap-2 rounded-lg bg-white/50 px-2.5 py-2">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: riskDot[insight.severity] }} />
+            <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-on-surface">{insight.summary}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-outline-variant/10 pt-2.5">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-[12px] font-bold text-on-surface">Alerts</h3>
+          <Link href="/insights" className="text-[10px] font-bold text-brand-purple">View All</Link>
+        </div>
+        <div className="space-y-1.5">
+          {[
+            { title: "Madhurawada beds 96%", sev: "critical" as FacilityStatus },
+            { title: `${topMed?.name ?? "Paracetamol"} low`, sev: "high" as FacilityStatus },
+            { title: `${spikes?.condition ?? "Dengue"} rising`, sev: "high" as FacilityStatus },
+          ].map((a, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-lg bg-white/40 px-2.5 py-1.5">
+              <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-on-surface">{a.title}</p>
+              <RiskBadge value={a.sev} />
             </div>
-            <Link href="/disease-trends" className="text-xs text-[#6366f1] font-medium hover:underline">View all</Link>
-          </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={healthTrends}>
-                <defs>
-                  <linearGradient id="fever" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.15} /><stop offset="100%" stopColor="#ef4444" stopOpacity={0} /></linearGradient>
-                  <linearGradient id="resp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f97316" stopOpacity={0.15} /><stop offset="100%" stopColor="#f97316" stopOpacity={0} /></linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" opacity={0.5} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e4e4e7", boxShadow: "0 4px 12px rgba(0,0,0,0.06)" }} />
-                <Area type="monotone" dataKey="fever" stroke="#ef4444" strokeWidth={2} fill="url(#fever)" name="Fever" />
-                <Area type="monotone" dataKey="respiratory" stroke="#f97316" strokeWidth={2} fill="url(#resp)" name="Respiratory" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+          ))}
+        </div>
+      </div>
 
-        {/* Right Column: Pie + Radial */}
-        <div className="space-y-4">
-          <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-[#e4e4e7]">
-            <h2 className="text-sm font-semibold mb-3">Facility Risk</h2>
-            <div className="flex items-center gap-4">
-              <div className="w-24 h-24 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={22} outerRadius={38} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                      {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+      <button className="gradient-button mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-bold text-white">
+        <Sparkles className="h-3.5 w-3.5" /> Generate Brief
+      </button>
+    </section>
+  );
+}
+
+function DiseaseTrendChart() {
+  return (
+    <section className="card-glass p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-label-md font-bold text-on-surface">Disease Trend</h3>
+        <div className="flex items-center gap-3">
+          {[
+            { label: "Dengue", color: "#7C3AED" },
+            { label: "Malaria", color: "#2563EB" },
+            { label: "Typhoid", color: "#10B981" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+              <span className="text-[10px] font-semibold text-outline">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="h-[180px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={diseaseTrendData} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+            <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#5E668A" }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "#5E668A" }} tickLine={false} axisLine={false} />
+            <Tooltip
+              contentStyle={{ borderRadius: 10, border: "1px solid #E4E8F7", boxShadow: "0 4px 12px rgba(0,0,0,0.06)", fontSize: 11 }}
+              labelStyle={{ fontWeight: 600 }}
+            />
+            <Line type="monotone" dataKey="dengue" stroke="#7C3AED" strokeWidth={2} dot={{ r: 2.5, fill: "#7C3AED" }} activeDot={{ r: 4 }} />
+            <Line type="monotone" dataKey="malaria" stroke="#2563EB" strokeWidth={2} dot={{ r: 2.5, fill: "#2563EB" }} activeDot={{ r: 4 }} />
+            <Line type="monotone" dataKey="typhoid" stroke="#10B981" strokeWidth={2} dot={{ r: 2.5, fill: "#10B981" }} activeDot={{ r: 4 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  );
+}
+
+function MedicineStockCard() {
+  return (
+    <section className="card-glass p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-label-md font-bold text-on-surface">Stock Alerts</h3>
+        <div className="flex items-center gap-2">
+          {[{ l: "Crit", c: "#dc2626" }, { l: "Med", c: "#f59e0b" }, { l: "Low", c: "#10b981" }].map((i) => (
+            <div key={i.l} className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: i.c }} />
+              <span className="text-[10px] font-semibold text-outline">{i.l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2.5">
+        {medicineSeverity.map((item) => {
+          const bars = [
+            ...Array(item.high).fill("bg-error"),
+            ...Array(item.medium).fill("bg-warning"),
+            ...Array(item.low).fill("bg-success"),
+          ];
+          return (
+            <div key={item.facility}>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-[12px] font-semibold text-on-surface">{item.facility}</span>
+                <span className="text-[10px] font-bold text-outline">{item.total}</span>
               </div>
-              <div className="flex-1 space-y-1.5">
-                {pieData.map((e) => (
-                  <div key={e.name} className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: e.color }} />{e.name}</span>
-                    <span className="font-semibold">{e.value}</span>
-                  </div>
+              <div className="flex gap-1">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className={`h-5 flex-1 rounded-sm ${i < bars.length ? bars[i] : "bg-outline/10"}`} />
                 ))}
               </div>
             </div>
-          </motion.div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
-          <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-[#e4e4e7]">
-            <h2 className="text-sm font-semibold mb-3">Bed Occupancy</h2>
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={bedData} cx="50%" cy="50%" innerRadius={18} outerRadius={32} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                      {bedData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1">
-                <div className="text-2xl font-bold tracking-tight">{Math.round(dashboardSummary.occupiedBeds / dashboardSummary.totalBeds * 100)}%</div>
-                <div className="text-xs text-[#a1a1aa]">{dashboardSummary.occupiedBeds}/{dashboardSummary.totalBeds} beds</div>
-              </div>
-            </div>
-          </motion.div>
+function CreateFacilityModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="card-glass max-h-[88vh] w-full max-w-lg overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-outline-variant/10 px-5 py-3">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4 text-brand-purple" />
+            <h2 className="text-label-md font-bold">New PHC / CHC</h2>
+          </div>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-container-high">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid gap-2.5 px-5 py-4 sm:grid-cols-2">
+          {["Facility Name", "Type", "District", "Mandal", "Village", "Beds", "Doctors", "Nurses"].map((label) => (
+            <label key={label} className="text-[12px] font-medium text-on-surface">
+              {label}
+              <input className="mt-1 w-full rounded-lg border border-outline-variant/30 bg-white/70 px-2.5 py-1.5 text-[13px] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" />
+            </label>
+          ))}
+        </div>
+        <div className="flex gap-2 border-t border-outline-variant/10 px-5 py-3">
+          <button onClick={onClose} className="flex-1 rounded-lg border border-outline-variant/30 py-2 text-[13px] font-semibold hover:bg-surface-container-high">Cancel</button>
+          <button className="gradient-button flex-1 rounded-lg py-2 text-[13px] font-bold text-white">Create</button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* ─── Facility Risk Ranking + Alerts ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <motion.div variants={fadeUp} className="lg:col-span-2 bg-white rounded-2xl border border-[#e4e4e7] overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#e4e4e7]">
-            <div>
-              <h2 className="text-sm font-semibold">Facility Risk Ranking</h2>
-              <p className="text-xs text-[#a1a1aa]">Sorted by risk score</p>
-            </div>
-            <Link href="/facilities" className="text-xs text-[#6366f1] font-medium hover:underline">All facilities</Link>
-          </div>
-          <div className="divide-y divide-[#e4e4e7]/50">
-            {sortedFacilities.map((f, i) => <FacilityRow key={f.id} f={f} rank={i + 1} />)}
-          </div>
-        </motion.div>
+export default function DashboardPage() {
+  const { role } = useApp();
+  const [showCreate, setShowCreate] = useState(false);
+  const [showActionPlan, setShowActionPlan] = useState(false);
+  const sortedFacilities = useMemo(() => [...facilities].sort((a, b) => b.riskScore - a.riskScore), []);
+  const isDistrictOfficer = role === "district_officer";
+  const criticalFacility = sortedFacilities.find((f) => f.status === "critical") ?? sortedFacilities[0];
 
-        {/* Alerts */}
-        <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-[#e4e4e7] overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#e4e4e7]">
-            <h2 className="text-sm font-semibold">Recent Alerts</h2>
-            <p className="text-xs text-[#a1a1aa]">{alerts.length} active</p>
-          </div>
-          <div className="divide-y divide-[#e4e4e7]/50">
-            {alerts.map((a, i) => (
-              <div key={i} className="px-5 py-3 hover:bg-[#fafafa] transition-colors">
-                <div className="flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${a.severity === "critical" ? "bg-[#ef4444]" : "bg-[#f59e0b]"}`} />
-                  <div className="min-w-0">
-                    <p className="text-xs text-[#a1a1aa]">{a.facility}</p>
-                    <p className="text-sm mt-0.5">{a.alert}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
+  return (
+    <div className="min-w-0 space-y-4 p-4 md:p-6 lg:p-7">
+      <HeroPanel onCreate={() => setShowCreate(true)} canCreate={isDistrictOfficer} />
 
-      {/* ─── Create Modal ─── */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4e4e7]">
-              <h2 className="text-sm font-semibold">New PHC / CHC</h2>
-              <button onClick={() => setShowCreate(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f4f4f5] transition-colors"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              {["Facility Name", "Type", "District", "Mandal", "Village", "Total Beds", "Doctors", "Nurses"].map((f) => (
-                <div key={f}>
-                  <label className="text-xs font-medium mb-1 block">{f}</label>
-                  <input type="text" placeholder={`Enter ${f.toLowerCase()}`} className="premium-input" />
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-3 px-6 py-4 border-t border-[#e4e4e7]">
-              <button onClick={() => setShowCreate(false)} className="btn-secondary flex-1">Cancel</button>
-              <button className="btn-primary flex-1">Create Facility</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </motion.div>
+      <CriticalAlertBanner facility={criticalFacility} onActionPlan={() => setShowActionPlan(true)} />
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {metricCards.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+      </section>
+
+      <section className="flex flex-wrap items-center gap-1.5">
+        {quickActions.map((action) => (
+          <Link
+            key={action.label}
+            href={action.href}
+            className="flex items-center gap-1.5 rounded-lg border border-outline-variant/20 bg-white/70 px-3 py-2 text-[12px] font-semibold text-brand-purple transition-colors hover:bg-brand-purple/5 hover:border-brand-purple/25"
+          >
+            <action.icon className="h-3.5 w-3.5" /> {action.label}
+          </Link>
+        ))}
+      </section>
+
+      <section className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <FacilityRiskTable facilities={sortedFacilities} />
+        <AIDistrictBrief />
+      </section>
+
+      <section className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+        <DiseaseTrendChart />
+        <MedicineStockCard />
+      </section>
+
+      {showCreate && <CreateFacilityModal onClose={() => setShowCreate(false)} />}
+      {showActionPlan && <ActionPlanModal facility={criticalFacility} onClose={() => setShowActionPlan(false)} />}
+    </div>
   );
 }
