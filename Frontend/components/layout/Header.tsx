@@ -1,42 +1,58 @@
 "use client";
 
-import { Search, Bell, Sparkles, ChevronDown } from "lucide-react";
+import { Search, Bell, RefreshCw, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { useApp } from "@/lib/app-context";
+import RoleSwitcher from "./RoleSwitcher";
 
 export default function Header() {
+  const { simulationMode, setSimulationMode } = useApp();
+
   return (
-    <header className="bg-white border-b border-border sticky top-0 z-30 shrink-0">
-      <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-        <div className="flex items-center gap-2 flex-1 max-w-lg">
-          <div className="relative group w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted group-focus-within:text-[#3b48b8] transition-colors" />
-            <input
-              type="text"
-              placeholder="Search patients, reports..."
-              className="w-full pl-9 pr-3 py-2 bg-bg-base rounded-lg text-[13px] text-text-primary placeholder:text-text-muted border border-border focus:outline-none focus:ring-2 focus:ring-[#3b48b8]/10 focus:border-[#3b48b8]/30 focus:bg-white transition-all"
-            />
+    <header className="sticky top-0 z-50 border-b border-outline-variant/30 bg-surface/80 backdrop-blur-md shadow-sm">
+      <div className="flex justify-between items-center w-full px-4 md:px-10 py-3">
+        <div className="flex items-center gap-6">
+          <div className="hidden md:flex items-center">
+            <div className="group relative w-72">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline w-4 h-4 group-focus-within:text-primary transition-colors" />
+              <input
+                type="text"
+                placeholder="Search patients, records, facilities..."
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-outline-variant/25 bg-surface-container-lowest/60 focus:bg-surface-container-lowest focus:border-primary/30 focus:ring-2 focus:ring-primary/10 outline-none text-label-md placeholder:text-outline/40 transition-all"
+              />
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button className="relative w-8 h-8 rounded-lg hover:bg-bg-base flex items-center justify-center transition-all hover:scale-105 active:scale-95">
-            <Bell className="w-[16px] h-[16px] text-text-secondary" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-400 rounded-full ring-2 ring-white" />
+        <div className="flex items-center gap-3">
+          <RoleSwitcher />
+          <button
+            onClick={() => setSimulationMode(simulationMode === "today" ? "tomorrow" : "today")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-label-sm font-medium ${
+              simulationMode === "tomorrow"
+                ? "bg-primary/10 border-primary/20 text-primary"
+                : "bg-surface-container-lowest/60 border-outline-variant/25 text-on-surface-variant hover:border-outline-variant/40"
+            }`}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 transition-transform duration-500 ${simulationMode === "tomorrow" ? "text-primary rotate-180" : ""}`} />
+            {simulationMode === "tomorrow" ? "Tomorrow Mode" : "Simulate Tomorrow"}
           </button>
-
-          <button className="flex items-center gap-1.5 bg-gradient-to-r from-[#3b48b8] to-[#5a2bae] hover:from-[#2f3a9a] hover:to-[#4a2394] text-white text-[13px] font-medium px-3 py-2 rounded-lg transition-all active:scale-95">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">AI</span>
-          </button>
-
-          <div className="flex items-center gap-2 pl-2.5 border-l border-border">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#3b48b8] to-[#5a2bae] flex items-center justify-center text-[10px] font-bold text-white">
+          <div className="flex items-center gap-0.5">
+            <button className="relative w-9 h-9 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-all">
+              <Bell className="w-[18px] h-[18px]" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-surface" />
+            </button>
+            <button className="w-9 h-9 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-all">
+              <SlidersHorizontal className="w-[18px] h-[18px]" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2.5 pl-3 border-l border-outline-variant/20">
+            <div className="text-right hidden sm:block">
+              <p className="text-label-sm font-semibold text-on-surface leading-tight">Dr. Arjun Mehta</p>
+              <p className="text-label-xs text-outline">Medical Officer</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg brand-gradient flex items-center justify-center text-white text-xs font-bold shadow-sm">
               DR
             </div>
-            <div className="hidden sm:block">
-              <p className="text-[13px] font-semibold text-text-primary leading-tight">Dr. Arjun Mehta</p>
-              <p className="text-[11px] text-text-muted">Medical Officer</p>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-text-muted hidden sm:block" />
+            <ChevronDown className="w-3.5 h-3.5 text-outline hidden sm:block" />
           </div>
         </div>
       </div>

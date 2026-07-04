@@ -4,18 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Users,
-  Stethoscope,
-  Sparkles,
-  Building2,
-  Package,
-  TrendingUp,
-  UserRound,
-  ChevronLeft,
-  ChevronRight,
+  LayoutDashboard, Users, Stethoscope, Sparkles,
+  Building2, Package, TrendingUp, UserRound,
+  HelpCircle, LogOut, ChevronRight,
 } from "lucide-react";
-import { useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -30,24 +22,13 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <aside
-      className={`${collapsed ? "w-[68px]" : "w-60"} h-screen flex flex-col transition-all duration-300 ease-in-out shrink-0 relative bg-white border-r border-border`}
-    >
-      <div className="flex items-center justify-center h-16 shrink-0 border-b border-border">
-        <div className={`flex items-center justify-center ${collapsed ? "w-10 h-10" : ""}`}>
-          {collapsed ? (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3b48b8] to-[#5a2bae] flex items-center justify-center">
-              <span className="text-sm font-bold text-white">A</span>
-            </div>
-          ) : (
-            <Image src="/logo.png" alt="Arogyam" width={160} height={45} className="object-contain" priority />
-          )}
-        </div>
+    <aside className="fixed left-0 top-0 h-full w-64 bg-surface/90 backdrop-blur-md flex flex-col border-r border-outline-variant/15 z-50">
+      <div className="px-6 py-6 border-b border-outline-variant/10">
+        <Image src="/logo.png" alt="CareGrid 360" width={140} height={38} className="object-contain" priority />
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-3 py-5 space-y-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
@@ -55,34 +36,31 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group relative ${collapsed ? "justify-center" : ""} ${
+              className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? "glow-active bg-gradient-to-r from-[#eef0fa] to-[#eef0fa]/50 text-[#3b48b8] font-semibold"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-base"
+                  ? "bg-primary-container text-primary font-semibold active-nav-glow"
+                  : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
               }`}
             >
-              {isActive && !collapsed && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[#3b48b8] rounded-r-full shadow-[0_0_8px_rgba(59,72,184,0.4)]" />
-              )}
-              <Icon className={`w-[20px] h-[20px] shrink-0 transition-transform duration-200 ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
-              {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
-              {!collapsed && isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#3b48b8] animate-pulse-dot" />}
+              <Icon className={`w-[18px] h-[18px] shrink-0 transition-transform duration-200 ${
+                isActive ? "" : "group-hover:scale-110"
+              }`} />
+              <span className="text-label-md flex-1">{item.label}</span>
+              {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
             </Link>
           );
         })}
       </nav>
-
-      <div className="px-3 py-3 border-t border-border">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center w-full py-2 rounded-xl text-text-muted hover:text-text-secondary hover:bg-bg-base transition-all group"
-        >
-          {collapsed ? (
-            <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-          ) : (
-            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
-          )}
-        </button>
+      <div className="px-3 py-4 border-t border-outline-variant/10 space-y-1">
+        <a className="flex items-center gap-3 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all px-4 py-2.5 rounded-xl" href="#">
+          <HelpCircle className="w-[18px] h-[18px]" />
+          <span className="text-label-md flex-1">Help Center</span>
+          <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </a>
+        <a className="flex items-center gap-3 bg-brand-purple text-white hover:bg-brand-purple/90 transition-all px-4 py-2.5 rounded-xl font-medium shadow-sm shadow-brand-purple/20" href="#">
+          <LogOut className="w-[18px] h-[18px]" />
+          <span className="text-label-md flex-1">Log Out</span>
+        </a>
       </div>
     </aside>
   );

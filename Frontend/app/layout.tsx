@@ -39,7 +39,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} ${inter.variable} antialiased scroll-smooth`}
     >
-      <body className="min-h-screen bg-background text-on-surface font-body-md">
+      <body className="min-h-screen bg-background text-on-surface font-body-md overflow-x-hidden">
         {children}
       </body>
     </html>
