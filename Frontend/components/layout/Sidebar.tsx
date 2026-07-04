@@ -57,12 +57,12 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group relative ${collapsed ? "justify-center" : ""} ${
                 isActive
-                  ? "bg-gradient-to-r from-[#eef0fa] to-[#eef0fa]/50 text-[#3b48b8] font-semibold"
+                  ? "glow-active bg-gradient-to-r from-[#eef0fa] to-[#eef0fa]/50 text-[#3b48b8] font-semibold"
                   : "text-text-secondary hover:text-text-primary hover:bg-bg-base"
               }`}
             >
               {isActive && !collapsed && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[#3b48b8] rounded-r-full" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[#3b48b8] rounded-r-full shadow-[0_0_8px_rgba(59,72,184,0.4)]" />
               )}
               <Icon className={`w-[20px] h-[20px] shrink-0 transition-transform duration-200 ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
               {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
