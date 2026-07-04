@@ -2,7 +2,7 @@
 
 ## Product Definition
 
-CareGrid 360 is an AI PHC / CHC command center powered by a healthcare CRM layer.
+Arogyam is an AI PHC / CHC command center powered by a healthcare CRM layer.
 
 The frontend must make one story obvious during the hackathon demo:
 
@@ -128,7 +128,7 @@ Use lucide icons. Keep labels short and scannable.
 Header items:
 
 ```text
-CareGrid 360 logo/name
+Arogyam logo/name
 Current district or facility context
 Role switcher
 Simulate Tomorrow button
