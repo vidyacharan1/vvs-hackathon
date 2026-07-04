@@ -1,13 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { AlertTriangle, CheckCircle, Copy } from "lucide-react";
 import { aiInsights, getFacilityName } from "@/lib/demo-data";
 
-const statusPillClass: Record<string, string> = {
-  open: "pill pill-critical",
-  acknowledged: "pill pill-medium",
-  resolved: "pill pill-low",
+const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
+const stagger = { animate: { transition: { staggerChildren: 0.04 } } };
+
+const severityColors: Record<string, { accent: string; iconBg: string; iconText: string }> = {
+  critical: { accent: "border-l-[#ef4444]", iconBg: "bg-[#fef2f2]", iconText: "text-[#ef4444]" },
+  high: { accent: "border-l-[#f59e0b]", iconBg: "bg-[#fffbeb]", iconText: "text-[#f59e0b]" },
+  medium: { accent: "border-l-[#ca8a04]", iconBg: "bg-[#fefce8]", iconText: "text-[#ca8a04]" },
+  low: { accent: "border-l-[#10b981]", iconBg: "bg-[#f0fdf4]", iconText: "text-[#10b981]" },
+};
+
+const statusStyles: Record<string, string> = {
+  open: "bg-[#fef2f2] text-[#ef4444]",
+  acknowledged: "bg-[#fefce8] text-[#ca8a04]",
+  resolved: "bg-[#f0fdf4] text-[#10b981]",
 };
 
 export default function InsightsPage() {
@@ -16,60 +27,68 @@ export default function InsightsPage() {
   const filtered = filter === "all" ? aiInsights : aiInsights.filter((i) => i.severity === filter);
 
   return (
-    <div className="animate-fadeIn">
-      <section className="pt-12 pb-8 hero-mesh border-b border-outline-variant/20">
-        <div className="max-w-7xl mx-auto px-4 md:px-10">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <span className="text-primary font-label-sm uppercase tracking-widest block mb-2 font-semibold">AI</span>
-              <h1 className="text-4xl md:text-5xl font-bold text-on-surface leading-tight tracking-tight">AI Insights Board</h1>
-              <p className="text-body-lg text-on-surface-variant mt-3">{aiInsights.length} insights · {aiInsights.filter((i) => i.status === "open").length} open</p>
-            </div>
-            <div className="flex items-center gap-2 p-1 rounded-lg bg-surface-container-high/50">
-              {["all", "critical", "high", "medium", "low"].map((f) => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`px-4 py-1.5 rounded-lg text-label-xs font-semibold transition-all capitalize ${filter === f ? "bg-primary-fixed text-primary shadow-sm" : "text-outline hover:text-on-surface"}`}>{f}</button>
-              ))}
-            </div>
-          </div>
+    <motion.div className="p-6 space-y-6 max-w-7xl mx-auto" initial="initial" animate="animate" variants={stagger}>
+      <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">AI Insights Board</h2>
+          <p className="text-sm text-[#a1a1aa] mt-1">{aiInsights.length} insights &middot; {aiInsights.filter((i) => i.status === "open").length} open</p>
         </div>
-      </section>
+        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#f4f4f5]">
+          {["all", "critical", "high", "medium", "low"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize ${
+                filter === f ? "bg-white text-[#18181b] shadow-sm" : "text-[#a1a1aa] hover:text-[#52525b]"
+              }`}
+            >
+              {f === "all" ? "All" : f}
+            </button>
+          ))}
+        </div>
+      </motion.div>
 
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 md:px-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filtered.map((insight) => (
-              <div key={insight.id} className={`glass-card p-6 rounded-2xl border-l-4 hover:scale-[1.01] transition-transform duration-300 ${insight.severity === "critical" ? "border-l-error" : insight.severity === "high" ? "border-l-warning" : insight.severity === "medium" ? "border-l-primary" : "border-l-success"}`}>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${insight.severity === "critical" ? "bg-error-container text-on-error-container" : insight.severity === "high" ? "bg-warning/10 text-warning" : insight.severity === "medium" ? "bg-primary-fixed text-primary" : "bg-success/10 text-success"}`}>
-                      <AlertTriangle className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-label-md font-bold">{insight.type}</p>
-                        <span className={`pill pill-${insight.severity}`}>{insight.severity.charAt(0).toUpperCase() + insight.severity.slice(1)}</span>
-                      </div>
-                      <p className="text-label-xs text-outline">{getFacilityName(insight.facilityId)} · {new Date(insight.createdAt).toLocaleString()}</p>
-                    </div>
+      <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {filtered.map((insight) => {
+          const colors = severityColors[insight.severity] || severityColors.low;
+          return (
+            <div
+              key={insight.id}
+              className={`bg-white rounded-2xl p-5 border border-[#e4e4e7] border-l-4 ${colors.accent}`}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl ${colors.iconBg} ${colors.iconText} flex items-center justify-center`}>
+                    <AlertTriangle className="w-5 h-5" />
                   </div>
-                  <span className={statusPillClass[insight.status]}>{insight.status.charAt(0).toUpperCase() + insight.status.slice(1)}</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-[#18181b]">{insight.type}</span>
+                      <span className={`badge-${insight.severity}`}>{insight.severity.charAt(0).toUpperCase() + insight.severity.slice(1)}</span>
+                    </div>
+                    <p className="text-xs text-[#a1a1aa] mt-0.5">
+                      {getFacilityName(insight.facilityId)} &middot; {new Date(insight.createdAt).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-body-md text-on-surface mb-4">{insight.summary}</p>
-                <div className="rounded-xl bg-primary-fixed/30 border border-primary/10 p-4">
-                  <p className="text-primary font-label-sm uppercase tracking-widest">Recommended Action</p>
-                  <p className="text-label-sm text-primary mt-0.5">{insight.recommendation}</p>
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-higher text-label-xs font-semibold transition-all active:scale-95"><CheckCircle className="w-3.5 h-3.5" /> Acknowledge</button>
-                  <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-higher text-label-xs font-semibold transition-all active:scale-95"><CheckCircle className="w-3.5 h-3.5" /> Resolve</button>
-                  <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-higher text-label-xs font-semibold transition-all active:scale-95"><Copy className="w-3.5 h-3.5" /> Copy</button>
-                </div>
+                <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${statusStyles[insight.status] || ""}`}>
+                  {insight.status.charAt(0).toUpperCase() + insight.status.slice(1)}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    </div>
+              <p className="text-sm text-[#52525b] mb-4 leading-relaxed">{insight.summary}</p>
+              <div className="rounded-xl bg-[#eef2ff]/50 border border-[#6366f1]/10 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6366f1] mb-1">Recommended Action</p>
+                <p className="text-sm text-[#18181b]">{insight.recommendation}</p>
+              </div>
+              <div className="flex items-center gap-2 mt-4">
+                <button className="btn-secondary inline-flex items-center gap-1.5 text-xs"><CheckCircle className="w-3.5 h-3.5" /> Acknowledge</button>
+                <button className="btn-secondary inline-flex items-center gap-1.5 text-xs"><CheckCircle className="w-3.5 h-3.5" /> Resolve</button>
+                <button className="btn-secondary inline-flex items-center gap-1.5 text-xs"><Copy className="w-3.5 h-3.5" /> Copy</button>
+              </div>
+            </div>
+          );
+        })}
+      </motion.div>
+    </motion.div>
   );
 }
