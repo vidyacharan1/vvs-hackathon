@@ -1,4 +1,4 @@
-# CareGrid 360 Frontend Plan
+# Arogyam Frontend Plan
 
 ## Product Definition
 

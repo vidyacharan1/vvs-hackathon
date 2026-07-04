@@ -1,4 +1,4 @@
-# CareGrid 360 Backend Plan
+# Arogyam Backend Plan
 
 ## Product Definition
 
