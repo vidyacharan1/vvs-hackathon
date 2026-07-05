@@ -55,6 +55,62 @@ PATIENTS = [
         "conditions": ["Antenatal"], "followUpStatus": "completed",
         "lastVisit": "2026-06-29", "nextFollowUp": "2026-07-20", "avatar": "SB"
     },
+    {
+        "id": "pat-008", "name": "Rajeshwari", "age": 55, "gender": "Female",
+        "phone": "+91 98765 12008", "village": "Pendurthi", "facilityId": "phc-pendurthi",
+        "assignedDoctorId": "doc-5", "assignedNurseId": "nurse-5",
+        "riskScore": "Medium", "condition": "Hypertension",
+        "conditions": ["Hypertension"], "followUpStatus": "pending",
+        "lastVisit": "2026-07-03", "nextFollowUp": "2026-07-07", "avatar": "RW"
+    },
+    {
+        "id": "pat-009", "name": "Srinivasa Rao", "age": 48, "gender": "Male",
+        "phone": "+91 98765 12009", "village": "Ananthapuram", "facilityId": "phc-ananthapuram",
+        "assignedDoctorId": "doc-7", "assignedNurseId": "nurse-6",
+        "riskScore": "Medium", "condition": "Diabetes Type 2",
+        "conditions": ["Diabetes Type 2"], "followUpStatus": "pending",
+        "lastVisit": "2026-07-04", "nextFollowUp": "2026-07-08", "avatar": "SR"
+    },
+    {
+        "id": "pat-010", "name": "Lakshmi Narasamma", "age": 34, "gender": "Female",
+        "phone": "+91 98765 12010", "village": "Ananthapuram", "facilityId": "phc-ananthapuram",
+        "assignedDoctorId": "doc-8", "assignedNurseId": "nurse-6",
+        "riskScore": "Low", "condition": "Antenatal care",
+        "conditions": ["Antenatal"], "followUpStatus": "completed",
+        "lastVisit": "2026-07-01", "nextFollowUp": "2026-07-15", "avatar": "LN"
+    },
+    {
+        "id": "pat-011", "name": "Gangadhara Rao", "age": 67, "gender": "Male",
+        "phone": "+91 98765 12011", "village": "Ananthapuram", "facilityId": "phc-ananthapuram",
+        "assignedDoctorId": "doc-7", "assignedNurseId": "nurse-6",
+        "riskScore": "High", "condition": "COPD and hypertension",
+        "conditions": ["COPD", "Hypertension"], "followUpStatus": "overdue",
+        "lastVisit": "2026-06-28", "nextFollowUp": "2026-07-02", "avatar": "GR"
+    },
+    {
+        "id": "pat-012", "name": "Durga Prasad", "age": 52, "gender": "Male",
+        "phone": "+91 98765 12012", "village": "Narsipatnam", "facilityId": "chc-narsipatnam",
+        "assignedDoctorId": "doc-6", "assignedNurseId": "nurse-7",
+        "riskScore": "Medium", "condition": "Hypertension and diabetes",
+        "conditions": ["Hypertension", "Diabetes"], "followUpStatus": "pending",
+        "lastVisit": "2026-07-03", "nextFollowUp": "2026-07-06", "avatar": "DP"
+    },
+    {
+        "id": "pat-013", "name": "Parvathi Devi", "age": 35, "gender": "Female",
+        "phone": "+91 98765 12013", "village": "Narsipatnam", "facilityId": "chc-narsipatnam",
+        "assignedDoctorId": "doc-6", "assignedNurseId": "nurse-7",
+        "riskScore": "Low", "condition": "Antenatal care",
+        "conditions": ["Antenatal"], "followUpStatus": "completed",
+        "lastVisit": "2026-07-01", "nextFollowUp": "2026-07-15", "avatar": "PD"
+    },
+    {
+        "id": "pat-014", "name": "Krishna Murthy", "age": 71, "gender": "Male",
+        "phone": "+91 98765 12014", "village": "Devarapalle", "facilityId": "chc-narsipatnam",
+        "assignedDoctorId": "doc-6", "assignedNurseId": "nurse-7",
+        "riskScore": "High", "condition": "COPD with respiratory infection",
+        "conditions": ["COPD", "Respiratory infection"], "followUpStatus": "pending",
+        "lastVisit": "2026-07-04", "nextFollowUp": "2026-07-05", "avatar": "KM"
+    },
 ]
 
 

@@ -203,6 +203,8 @@ export const api = {
     detail: (id: string) => fetchJSON<FacilityResponse>(`/facilities/enriched/${id}`),
     create: (data: { name: string; facilityType: string; location: string; todayOpd?: number; bedOccupancy?: number }) =>
       fetchJSON<FacilityResponse>("/facilities", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<{ name: string; facilityType: string; location: string; overallRisk: string; todayOpd: number; medicineRisk: string; diseaseSpike: string; bedOccupancy: number }>) =>
+      fetchJSON<FacilityResponse>(`/facilities/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     medicines: (id: string) => fetchJSON<MedicineResponse[]>(`/facilities/enriched/${id}/medicines`),
     insights: (id: string) => fetchJSON<InsightResponse[]>(`/facilities/enriched/${id}/insights`),
     patients: (id: string) => fetchJSON<PatientResponse[]>(`/facilities/enriched/${id}/patients`),
@@ -214,21 +216,28 @@ export const api = {
     detail: (id: string) => fetchJSON<PatientResponse>(`/patients/${id}`),
     create: (data: { name: string; age: number; gender: string; phone?: string; village?: string; facilityId?: string; riskScore?: string; condition?: string; conditions?: string[] }) =>
       fetchJSON<PatientResponse>("/patients", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<{ name: string; age: number; gender: string; phone: string; village: string; facilityId: string; assignedDoctorId: string; assignedNurseId: string; riskScore: string; condition: string; conditions: string[]; followUpStatus: string }>) =>
+      fetchJSON<PatientResponse>(`/patients/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   },
   doctors: {
     list: () => fetchJSON<DoctorResponse[]>("/doctors"),
     detail: (id: string) => fetchJSON<DoctorResponse>(`/doctors/${id}`),
     create: (data: { name: string; facilityId: string; specialty?: string }) =>
       fetchJSON<DoctorResponse>("/doctors", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<{ name: string; facilityId: string; specialty: string; attendance: string; patientsSeenToday: number; maxCapacity: number; activePatients: number; highRiskPatients: number; pendingReviews: number; workloadStatus: string }>) =>
+      fetchJSON<DoctorResponse>(`/doctors/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   },
   nurses: {
     list: () => fetchJSON<NurseResponse[]>("/nurses"),
     detail: (id: string) => fetchJSON<NurseResponse>(`/nurses/${id}`),
     create: (data: { name: string; facilityId: string; assignedVillages?: string[] }) =>
       fetchJSON<NurseResponse>("/nurses", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<{ name: string; facilityId: string; assignedVillages: string[]; assignedPatients: number; pendingFollowUps: number; completedToday: number; highRiskFollowUps: number; workloadStatus: string }>) =>
+      fetchJSON<NurseResponse>(`/nurses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   },
   inventory: {
     alerts: () => fetchJSON<InventoryAlert[]>("/inventory/alerts"),
+    stock: () => fetchJSON<MedicineResponse[]>("/inventory/stock"),
     addStock: (data: { medicine: string; facilityId: string; quantity: number; batchNumber?: string }) =>
       fetchJSON<{ status: string; message: string }>("/inventory/add-stock", { method: "POST", body: JSON.stringify(data) }),
     transfer: (data: { medicine: string; fromFacilityId: string; toFacilityId: string; quantity: number }) =>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle, Eye, Search, Sparkles, Users, X } from "lucide-react";
+import { CheckCircle, Edit3, Eye, Search, Sparkles, Users, X } from "lucide-react";
 import { useNurses, useFacilities } from "@/lib/api";
+import { useApp } from "@/lib/app-context";
+import { EditNurseModal } from "@/components/modals/EditNurseModal";
 
 function workloadPill(status: string) {
   return status === "normal" ? "pill-low" : status === "high" ? "pill-high" : "pill-critical";
@@ -18,8 +20,13 @@ export default function NursesPage() {
   const [filterBy, setFilterBy] = useState<"all" | "facility" | "village">("all");
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
   const [selectedVillage, setSelectedVillage] = useState<string | null>(null);
-  const { data: nursesData } = useNurses();
+  const [editingNurse, setEditingNurse] = useState<string | null>(null);
+  const { data: nursesData, refetch } = useNurses();
   const { data: facilitiesList } = useFacilities();
+  const { role } = useApp();
+
+  const canEdit = role === "district_officer" || role === "medical_officer";
+  const canOptimize = role === "district_officer" || role === "medical_officer";
 
   const allNurses = nursesData ?? [];
   const allFacilities = facilitiesList ?? [];
@@ -46,9 +53,11 @@ export default function NursesPage() {
             <p className="text-label-sm text-outline mt-1">Community health and field operations management</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => { fetch("/api/v1/ai/optimize-nurses", { method: "POST" }).then((r) => r.json()).then((data) => alert(`AI Optimization:\n${data.optimization}\n\nImpact: ${data.impact}`)); }} className="card-glass flex items-center gap-2 rounded-xl px-4 py-2.5 text-label-sm font-semibold transition-all duration-200 hover:scale-[1.02]">
-              <Sparkles className="h-4 w-4 text-brand-purple" /> Optimize Operations
-            </button>
+            {canOptimize && (
+              <button onClick={() => { fetch("/api/v1/ai/optimize-nurses", { method: "POST" }).then((r) => r.json()).then((data) => alert(`AI Optimization:\n${data.optimization}\n\nImpact: ${data.impact}`)); }} className="card-glass flex items-center gap-2 rounded-xl px-4 py-2.5 text-label-sm font-semibold transition-all duration-200 hover:scale-[1.02]">
+                <Sparkles className="h-4 w-4 text-brand-purple" /> Optimize Operations
+              </button>
+            )}
             <button className="card-glass flex items-center gap-2 rounded-xl px-4 py-2.5 text-label-sm font-semibold transition-all duration-200 hover:scale-[1.02]">
               <CheckCircle className="h-4 w-4 text-success" /> Mark Completed
             </button>
@@ -152,7 +161,15 @@ export default function NursesPage() {
                 <td className="hidden px-2 py-2.5 text-label-sm text-success sm:table-cell">{item.completedToday}</td>
                 <td className="hidden px-2 py-2.5 text-label-sm text-error xl:table-cell">{item.highRiskFollowUps}</td>
                 <td className="px-2 py-2.5"><span className={`pill ${workloadPill(item.workloadStatus)}`}>{item.workloadStatus}</span></td>
-                <td className="px-2 py-2.5"><Eye className="h-4 w-4 text-outline" /></td>
+                <td className="px-2 py-2.5">
+                  {canEdit ? (
+                    <button onClick={(e) => { e.stopPropagation(); setEditingNurse(item.id); }} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-container-high">
+                      <Edit3 className="h-4 w-4 text-brand-purple" />
+                    </button>
+                  ) : (
+                    <Eye className="h-4 w-4 text-outline" />
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -201,6 +218,17 @@ export default function NursesPage() {
           </div>
         </div>
       )}
+      {editingNurse && (() => {
+        const n = allNurses.find((item) => item.id === editingNurse);
+        return n ? (
+          <EditNurseModal
+            nurse={n}
+            facilities={allFacilities}
+            onClose={() => setEditingNurse(null)}
+            onUpdated={() => refetch()}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

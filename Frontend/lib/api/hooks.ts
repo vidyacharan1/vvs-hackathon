@@ -22,6 +22,7 @@ function useFetch<T>(fetcher: () => Promise<T>) {
   const [error, setError] = useState<string | null>(null);
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
+  const hasLoaded = useRef(false);
 
   const doFetch = useCallback(async () => {
     try {
@@ -29,6 +30,7 @@ function useFetch<T>(fetcher: () => Promise<T>) {
       const result = await fetcherRef.current();
       setData(result);
       setError(null);
+      hasLoaded.current = true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch");
     } finally {
@@ -37,10 +39,11 @@ function useFetch<T>(fetcher: () => Promise<T>) {
   }, []);
 
   useEffect(() => {
+    hasLoaded.current = false;
     doFetch();
   }, [doFetch]);
 
-  return { data, loading, error, refetch: doFetch };
+  return { data, loading: loading && !hasLoaded.current, error, refetch: doFetch };
 }
 
 export function useDistrictDashboard() {
@@ -64,6 +67,13 @@ export function useFacilityDetail(id: string | undefined) {
 export function useInventoryAlerts() {
   return useFetch(async () => {
     const result = await api.inventory.alerts();
+    return Array.isArray(result) ? result : [];
+  });
+}
+
+export function useInventoryStock() {
+  return useFetch(async () => {
+    const result = await api.inventory.stock();
     return Array.isArray(result) ? result : [];
   });
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, Eye, Search, Sparkles, Stethoscope, X } from "lucide-react";
+import { BarChart3, Edit3, Eye, Search, Sparkles, Stethoscope, X } from "lucide-react";
 import { useDoctors, useFacilities } from "@/lib/api";
+import { useApp } from "@/lib/app-context";
+import { EditDoctorModal } from "@/components/modals/EditDoctorModal";
 
 function workloadPill(status: string) {
   return status === "normal" ? "pill-low" : status === "high" ? "pill-high" : "pill-critical";
@@ -15,8 +17,13 @@ function getFacilityName(facilities: { id: string; name: string }[], id: string)
 export default function DoctorsPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
-  const { data: doctors } = useDoctors();
+  const [editingDoctor, setEditingDoctor] = useState<string | null>(null);
+  const { data: doctors, refetch } = useDoctors();
   const { data: facilitiesList } = useFacilities();
+  const { role } = useApp();
+
+  const canEdit = role === "district_officer" || role === "medical_officer";
+  const canAnalyze = role === "district_officer" || role === "medical_officer";
 
   const allDoctors = doctors ?? [];
   const allFacilities = facilitiesList ?? [];
@@ -35,9 +42,11 @@ export default function DoctorsPage() {
           <h1 className="text-headline-md font-bold text-on-surface md:text-headline-lg">Doctor CRM</h1>
           <p className="text-label-sm text-outline">{allDoctors.length} doctors with attendance and load tracking.</p>
         </div>
-        <button onClick={() => { fetch("/api/v1/ai/analyze-load", { method: "POST" }).then((r) => r.json()).then((data) => alert(`AI Analysis:\n${data.analysis}\n\nOptimization: ${data.optimization}`)); }} className="card-glass flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold">
-          <BarChart3 className="h-4 w-4 text-brand-purple" /> Analyze Load
-        </button>
+        {canAnalyze && (
+          <button onClick={() => { fetch("/api/v1/ai/analyze-load", { method: "POST" }).then((r) => r.json()).then((data) => { const a = data.analysis || {}; alert(`AI Analysis:\n\nOverloaded:\n${(a.overloaded || []).map((d: string) => "  • " + d).join("\n")}\n\nUnderutilized:\n${(a.underutilized || []).map((d: string) => "  • " + d).join("\n")}\n\nSuggestion: ${a.suggestion || data.text || "N/A"}`); }); }} className="card-glass flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold">
+            <BarChart3 className="h-4 w-4 text-brand-purple" /> Analyze Load
+          </button>
+        )}
       </div>
 
       <div className="relative max-w-md">
@@ -92,7 +101,15 @@ export default function DoctorsPage() {
                 <td className="hidden px-2 py-2.5 text-label-sm text-on-surface sm:table-cell">{doctor.activePatients}</td>
                 <td className="hidden px-2 py-2.5 text-label-sm text-on-surface xl:table-cell">{doctor.pendingReviews}</td>
                 <td className="px-2 py-2.5"><span className={`pill ${workloadPill(doctor.workloadStatus)}`}>{doctor.workloadStatus}</span></td>
-                <td className="px-2 py-2.5"><Eye className="h-4 w-4 text-outline" /></td>
+                <td className="px-2 py-2.5">
+                  {canEdit ? (
+                    <button onClick={(e) => { e.stopPropagation(); setEditingDoctor(doctor.id); }} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-container-high">
+                      <Edit3 className="h-4 w-4 text-brand-purple" />
+                    </button>
+                  ) : (
+                    <Eye className="h-4 w-4 text-outline" />
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -137,6 +154,17 @@ export default function DoctorsPage() {
           </div>
         </div>
       )}
+      {editingDoctor && (() => {
+        const d = allDoctors.find((doctor) => doctor.id === editingDoctor);
+        return d ? (
+          <EditDoctorModal
+            doctor={d}
+            facilities={allFacilities}
+            onClose={() => setEditingDoctor(null)}
+            onUpdated={() => refetch()}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

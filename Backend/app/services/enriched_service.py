@@ -2,7 +2,8 @@ from app.services.facility_service import FACILITIES
 from app.services.doctor_service import DOCTORS
 from app.services.nurse_service import NURSES
 from app.services.patient_service import PATIENTS
-from app.services.facility_detail_service import MEDICINES, AI_INSIGHTS
+from app.services.inventory_service import INVENTORY_STOCK
+from app.services.facility_detail_service import AI_INSIGHTS
 
 
 def get_enriched_facilities() -> list[dict]:
@@ -12,7 +13,7 @@ def get_enriched_facilities() -> list[dict]:
         docs = [d for d in DOCTORS if d["facilityId"] == fid]
         nurses = [n for n in NURSES if n["facilityId"] == fid]
         patients = [p for p in PATIENTS if p["facilityId"] == fid]
-        meds = [m for m in MEDICINES if m["facilityId"] == fid]
+        meds = [m for m in INVENTORY_STOCK if m["facilityId"] == fid]
         insights = [i for i in AI_INSIGHTS if i["facilityId"] == fid]
 
         doctors_present = sum(1 for d in docs if d["attendance"] == "present")
@@ -58,7 +59,7 @@ def get_enriched_facility_detail(facility_id: str) -> dict:
     docs = [d for d in DOCTORS if d["facilityId"] == fid]
     nurses_list = [n for n in NURSES if n["facilityId"] == fid]
     patients_list = [p for p in PATIENTS if p["facilityId"] == fid]
-    meds = [m for m in MEDICINES if m["facilityId"] == fid]
+    meds = [m for m in INVENTORY_STOCK if m["facilityId"] == fid]
     insights = [i for i in AI_INSIGHTS if i["facilityId"] == fid]
 
     return {

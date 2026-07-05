@@ -20,6 +20,7 @@ export {
   useFacilities,
   useFacilityDetail,
   useInventoryAlerts,
+  useInventoryStock,
   useAlertFeed,
   useAIDistrictBrief,
   usePatients,

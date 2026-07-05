@@ -1,7 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.inventory_service import get_inventory_alerts
+from app.core.database import get_db
+from app.services import db
 
 router = APIRouter()
 
@@ -21,26 +23,38 @@ class TransferStockRequest(BaseModel):
 
 
 @router.get("/alerts")
-async def inventory_alerts() -> list[dict]:
-    return get_inventory_alerts()
+async def inventory_alerts(session: AsyncSession = Depends(get_db)) -> list[dict]:
+    return await db.get_inventory_alerts(session)
+
+
+@router.get("/stock")
+async def inventory_stock(session: AsyncSession = Depends(get_db)) -> list[dict]:
+    return await db.get_inventory_stock(session)
 
 
 @router.post("/add-stock")
-async def add_stock(req: AddStockRequest) -> dict:
+async def add_stock(req: AddStockRequest, session: AsyncSession = Depends(get_db)) -> dict:
+    result = await db.add_stock_item(session, req.medicine, req.facilityId, req.quantity, req.batchNumber)
+    if "error" in result:
+        return {"status": "error", "message": result["error"]}
     return {
         "status": "success",
         "message": f"Added {req.quantity} units of {req.medicine} to {req.facilityId}",
         "medicine": req.medicine,
         "facilityId": req.facilityId,
         "quantityAdded": req.quantity,
+        "updatedStock": result,
     }
 
 
 @router.post("/transfer")
-async def transfer_stock(req: TransferStockRequest) -> dict:
+async def transfer_stock(req: TransferStockRequest, session: AsyncSession = Depends(get_db)) -> dict:
+    result = await db.transfer_stock_item(session, req.medicine, req.fromFacilityId, req.toFacilityId, req.quantity)
+    if "error" in result:
+        return {"status": "error", "message": result["error"]}
     return {
         "status": "success",
-        "message": f"Transferred {req.quantity} units of {req.medicine} from {req.fromFacilityId} to {req.toFacilityId}",
+        "message": result["message"],
         "medicine": req.medicine,
         "from": req.fromFacilityId,
         "to": req.toFacilityId,

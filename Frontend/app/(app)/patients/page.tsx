@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Eye, Plus, Search, Sparkles, X } from "lucide-react";
+import { Edit3, Eye, Plus, Search, Sparkles, X } from "lucide-react";
 import { usePatients, useFacilities } from "@/lib/api";
+import { useApp } from "@/lib/app-context";
+import { EditPatientModal } from "@/components/modals/EditPatientModal";
 
 function riskPill(risk: string) {
   return risk === "Critical" ? "pill-critical" : risk === "High" ? "pill-high" : risk === "Medium" ? "pill-medium" : "pill-low";
@@ -113,8 +115,13 @@ export default function PatientsPage() {
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [facilityFilter, setFacilityFilter] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<string | null>(null);
   const { data: patients, refetch } = usePatients();
   const { data: facilitiesList } = useFacilities();
+  const { role } = useApp();
+
+  const canCreate = role === "district_officer" || role === "medical_officer" || role === "doctor" || role === "nurse";
+  const canEdit = role === "district_officer" || role === "medical_officer";
 
   const allPatients = patients ?? [];
   const allFacilities = facilitiesList ?? [];
@@ -139,9 +146,11 @@ export default function PatientsPage() {
           <p className="text-label-sm text-outline">{allPatients.length} patients across district facilities.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setShowAdd(true)} className="gradient-button flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold text-white">
-            <Plus className="h-4 w-4" /> Add Patient
-          </button>
+          {canCreate && (
+            <button onClick={() => setShowAdd(true)} className="gradient-button flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold text-white">
+              <Plus className="h-4 w-4" /> Add Patient
+            </button>
+          )}
           <button className="card-glass flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold">
             <Sparkles className="h-4 w-4 text-brand-purple" /> Summarize
           </button>
@@ -206,7 +215,15 @@ export default function PatientsPage() {
                 <td className="px-2 py-2.5"><span className={`pill ${riskPill(item.riskScore)}`}>{item.riskScore}</span></td>
                 <td className="px-2 py-2.5"><span className={`pill ${item.followUpStatus === "completed" ? "pill-low" : item.followUpStatus === "overdue" ? "pill-critical" : "pill-medium"}`}>{item.followUpStatus}</span></td>
                 <td className="hidden px-2 py-2.5 text-label-sm text-outline sm:table-cell">{item.nextFollowUp}</td>
-                <td className="px-2 py-2.5"><Eye className="h-4 w-4 text-outline" /></td>
+                <td className="px-2 py-2.5">
+                  {canEdit ? (
+                    <button onClick={(e) => { e.stopPropagation(); setEditingPatient(item.id); }} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-container-high">
+                      <Edit3 className="h-4 w-4 text-brand-purple" />
+                    </button>
+                  ) : (
+                    <Eye className="h-4 w-4 text-outline" />
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -251,6 +268,17 @@ export default function PatientsPage() {
         </div>
       )}
       {showAdd && <AddPatientModal onClose={() => setShowAdd(false)} onCreated={() => refetch()} facilities={allFacilities} />}
+      {editingPatient && (() => {
+        const p = allPatients.find((item) => item.id === editingPatient);
+        return p ? (
+          <EditPatientModal
+            patient={p}
+            facilities={allFacilities}
+            onClose={() => setEditingPatient(null)}
+            onUpdated={() => refetch()}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

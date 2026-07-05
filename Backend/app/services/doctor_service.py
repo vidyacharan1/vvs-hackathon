@@ -25,8 +25,8 @@ DOCTORS = [
     },
     {
         "id": "doc-5", "name": "Dr. Nikhil Reddy", "facilityId": "phc-pendurthi",
-        "specialty": "General Medicine", "attendance": "on leave",
-        "patientsSeenToday": 0, "maxCapacity": 40, "activePatients": 74,
+        "specialty": "General Medicine", "attendance": "present",
+        "patientsSeenToday": 28, "maxCapacity": 40, "activePatients": 74,
         "highRiskPatients": 7, "pendingReviews": 6, "workloadStatus": "normal"
     },
     {
@@ -34,6 +34,18 @@ DOCTORS = [
         "specialty": "Public Health", "attendance": "present",
         "patientsSeenToday": 31, "maxCapacity": 45, "activePatients": 65,
         "highRiskPatients": 5, "pendingReviews": 4, "workloadStatus": "normal"
+    },
+    {
+        "id": "doc-7", "name": "Dr. Suresh Babu", "facilityId": "phc-ananthapuram",
+        "specialty": "General Medicine", "attendance": "present",
+        "patientsSeenToday": 22, "maxCapacity": 35, "activePatients": 45,
+        "highRiskPatients": 4, "pendingReviews": 3, "workloadStatus": "normal"
+    },
+    {
+        "id": "doc-8", "name": "Dr. Priya Nair", "facilityId": "phc-ananthapuram",
+        "specialty": "Obstetrics", "attendance": "present",
+        "patientsSeenToday": 18, "maxCapacity": 30, "activePatients": 38,
+        "highRiskPatients": 6, "pendingReviews": 5, "workloadStatus": "normal"
     },
 ]
 

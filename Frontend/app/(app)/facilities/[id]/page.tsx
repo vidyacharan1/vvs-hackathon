@@ -10,8 +10,10 @@ import {
   BedDouble,
   CheckCircle,
   ClipboardList,
+  Edit3,
   MapPin,
   Pill,
+  Plus,
   Sparkles,
   Stethoscope,
   Thermometer,
@@ -19,7 +21,12 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import { useFacilityDetail } from "@/lib/api";
+import { useFacilityDetail, useFacilities } from "@/lib/api";
+import { useApp } from "@/lib/app-context";
+import { EditFacilityModal } from "@/components/modals/EditFacilityModal";
+import { AddDoctorModal } from "@/components/modals/AddDoctorModal";
+import { AddNurseModal } from "@/components/modals/AddNurseModal";
+import { AddMedicineModal } from "@/components/modals/AddMedicineModal";
 
 const statusLabel: Record<string, string> = {
   critical: "Critical",
@@ -78,13 +85,29 @@ function Panel({ title, icon: Icon, children, action }: { title: string; icon: E
   );
 }
 
-function ActionPlanModal({ onClose }: { onClose: () => void }) {
+function ActionPlanModal({ facilityId, onClose }: { facilityId: string; onClose: () => void }) {
+  const [plan, setPlan] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useState(() => {
+    fetch("/api/v1/ai/facility-action-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ facilityId }),
+    })
+      .then((r) => r.json())
+      .then((data) => { setPlan(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  });
+
   const sections = [
-    { title: "Doctor Actions", items: ["Move one doctor from CHC Bheemunipatnam", "Redistribute 12 pending reviews", "Review high-risk patients first"] },
-    { title: "Nurse Actions", items: ["Route 8 low-risk follow-ups to Sr. Revathi", "Prioritize 5 high-risk home visits", "Deploy one district nurse"] },
-    { title: "Medicine Actions", items: ["Transfer 500 Paracetamol strips", "Move 300 ORS packets", "Order insulin buffer for next week"] },
-    { title: "Patient Actions", items: ["Home visit for overdue chronic cases", "Complete fever follow-ups in 48h", "Send ANC reminders today"] },
-  ];
+    { title: "Doctor Actions", items: plan?.doctorActions || [] },
+    { title: "Nurse Actions", items: plan?.nurseActions || [] },
+    { title: "Medicine Actions", items: plan?.medicineActions || [] },
+    { title: "Patient Actions", items: plan?.patientActions || [] },
+  ].filter((s) => s.items.length > 0);
+
+  const impact = plan?.impact || {};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" onClick={onClose}>
@@ -93,46 +116,65 @@ function ActionPlanModal({ onClose }: { onClose: () => void }) {
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-purple/10"><Sparkles className="h-4 w-4 text-brand-purple" /></div>
             <div>
-              <h2 className="text-headline-sm font-bold">AI Action Plan</h2>
+              <h2 className="text-headline-sm font-bold">{plan?.title || "AI Action Plan"}</h2>
               <p className="text-label-xs text-outline">Priority plan for the next 24 hours</p>
             </div>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-container-high"><XCircle className="h-4 w-4" /></button>
         </div>
         <div className="space-y-4 px-5 py-4">
-          <div className="rounded-2xl border border-brand-purple/10 bg-brand-purple/5 p-4">
-            <p className="text-label-xs uppercase tracking-widest text-outline">Executive Summary</p>
-            <p className="mt-1 text-label-md text-on-surface">PHC Madhurawada is critically overloaded. Doctor shortage, low fever medicine stock, and 96% bed occupancy require immediate redistribution and restocking.</p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {sections.map((section) => (
-              <div key={section.title} className="rounded-2xl border border-outline-variant/20 bg-white/70 p-3">
-                <p className="mb-2 text-label-md font-bold text-brand-purple">{section.title}</p>
-                <div className="space-y-1.5">
-                  {section.items.map((item) => (
-                    <div key={item} className="flex items-start gap-2 text-label-sm text-on-surface">
-                      <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
-                      <span>{item}</span>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Sparkles className="h-5 w-5 animate-pulse text-brand-purple mr-2" />
+              <span className="text-label-md text-outline">Generating AI action plan...</span>
+            </div>
+          ) : plan?.error ? (
+            <div className="rounded-2xl border border-error/10 bg-error/5 p-4 text-center">
+              <p className="text-label-md text-error">Failed to generate plan. Please try again.</p>
+            </div>
+          ) : (
+            <>
+              {plan?.summary && (
+                <div className="rounded-2xl border border-brand-purple/10 bg-brand-purple/5 p-4">
+                  <p className="text-label-xs uppercase tracking-widest text-outline">Executive Summary</p>
+                  <p className="mt-1 text-label-md text-on-surface">{plan.summary}</p>
+                </div>
+              )}
+              {sections.length > 0 && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {sections.map((section) => (
+                    <div key={section.title} className="rounded-2xl border border-outline-variant/20 bg-white/70 p-3">
+                      <p className="mb-2 text-label-md font-bold text-brand-purple">{section.title}</p>
+                      <div className="space-y-1.5">
+                        {section.items.map((item: string, i: number) => (
+                          <div key={i} className="flex items-start gap-2 text-label-sm text-on-surface">
+                            <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-success/10 bg-success/5 p-3 md:grid-cols-5">
-            {[
-              ["Stock-outs Avoided", "2"],
-              ["High-risk Prioritized", "8"],
-              ["Doctor Load Cut", "18%"],
-              ["Medicine Days Added", "2.8"],
-              ["Critical Alerts", "3"],
-            ].map(([label, value]) => (
-              <div key={label} className="text-center">
-                <p className="text-lg font-bold text-success">{value}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-outline">{label}</p>
-              </div>
-            ))}
-          </div>
+              )}
+              {impact.stockoutsAvoided !== undefined && (
+                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-success/10 bg-success/5 p-3 md:grid-cols-5">
+                  {[
+                    ["Stock-outs Avoided", String(impact.stockoutsAvoided ?? 0)],
+                    ["High-risk Prioritized", String(impact.highRiskPrioritized ?? 0)],
+                    ["Doctor Load Cut", String(impact.doctorLoadCut ?? "0%")],
+                    ["Medicine Days Added", String(impact.medicineDaysAdded ?? 0)],
+                    ["Critical Alerts", String(impact.criticalAlerts ?? 0)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="text-center">
+                      <p className="text-lg font-bold text-success">{value}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-outline">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
         <div className="flex justify-end border-t border-outline-variant/10 px-5 py-4">
           <button onClick={onClose} className="gradient-button rounded-xl px-5 py-2 text-label-md font-semibold text-white">Close</button>
@@ -145,27 +187,65 @@ function ActionPlanModal({ onClose }: { onClose: () => void }) {
 export default function FacilityDetailPage() {
   const params = useParams();
   const facilityId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { data: facility, loading } = useFacilityDetail(facilityId);
+  const { data: facility, loading, refetch } = useFacilityDetail(facilityId);
+  const { data: allFacilities } = useFacilities();
+  const { role } = useApp();
   const [showPlan, setShowPlan] = useState(false);
+  const [showEditFacility, setShowEditFacility] = useState(false);
+  const [showAddDoctor, setShowAddDoctor] = useState(false);
+  const [showAddNurse, setShowAddNurse] = useState(false);
+  const [showAddMedicine, setShowAddMedicine] = useState(false);
+
+  const isDistrictOfficer = role === "district_officer";
+  const canEditFacility = role === "district_officer";
+  const canAddDoctor = role === "district_officer" || role === "medical_officer";
+  const canAddNurse = role === "district_officer" || role === "medical_officer";
+  const canAddMedicine = role === "district_officer";
 
   if (loading) return <div className="p-8 text-center text-outline">Loading facility...</div>;
   if (!facility || facility.status === "not_found") return <div className="p-8 text-center text-outline">Facility not found</div>;
 
-  const doctors = facility.doctors ?? [];
-  const nurses = facility.nurses ?? [];
-  const meds = facility.medicines ?? [];
-  const facilityPatients = facility.patients ?? [];
-  const insights = facility.insights ?? [];
+  const f = {
+    ...facility,
+    type: facility.type ?? facility.facilityType ?? "PHC",
+    status: facility.status ?? facility.overallRisk?.toLowerCase() ?? "medium",
+    village: facility.village ?? facility.location ?? "",
+    mandal: facility.mandal ?? facility.location ?? "",
+    district: facility.district ?? "Visakhapatnam",
+    riskScore: facility.riskScore ?? facility.bedOccupancy ?? 0,
+    healthScore: facility.healthScore ?? 50,
+    bedOccupancyRate: facility.bedOccupancyRate ?? facility.bedOccupancy ?? 0,
+    doctorsPresent: facility.doctorsPresent ?? 0,
+    totalDoctors: facility.totalDoctors ?? 0,
+    nursesPresent: facility.nursesPresent ?? 0,
+    totalNurses: facility.totalNurses ?? 0,
+    criticalPatients: facility.criticalPatients ?? 0,
+    totalPatients: facility.totalPatients ?? 0,
+    openAlerts: facility.openAlerts ?? 0,
+    medicineStockIssues: facility.medicineStockIssues ?? 0,
+    diseaseSpikeCount: facility.diseaseSpikeCount ?? 0,
+    diseaseSpikeRisk: facility.diseaseSpikeRisk ?? 0,
+    avgOpd7day: facility.avgOpd7day ?? facility.todayOpd ?? 0,
+    todayOpd: facility.todayOpd ?? 0,
+    medicineRisk: facility.medicineRisk ?? "Low",
+    diseaseSpike: facility.diseaseSpike ?? "Low",
+  };
+
+  const doctors = f.doctors ?? [];
+  const nurses = f.nurses ?? [];
+  const meds = f.medicines ?? [];
+  const facilityPatients = f.patients ?? [];
+  const insights = f.insights ?? [];
   const pendingFollowUps = facilityPatients.filter((patient) => patient.followUpStatus === "pending" || patient.followUpStatus === "overdue").length;
   const highRiskPatients = facilityPatients.filter((patient) => patient.riskScore === "Critical" || patient.riskScore === "High");
 
   const healthCards = [
-    { icon: Activity, label: "Health Score", value: `${facility.healthScore}/100`, status: riskFromValue(100 - facility.healthScore) },
-    { icon: Stethoscope, label: "Doctors", value: `${facility.doctorsPresent}/${facility.totalDoctors} present`, status: facility.doctorsPresent < facility.totalDoctors ? "high" : "low" },
-    { icon: Users, label: "Nurses", value: `${facility.nursesPresent}/${facility.totalNurses} on duty`, status: facility.nursesPresent < facility.totalNurses ? "high" : "low" },
-    { icon: Pill, label: "Medicine", value: `${facility.medicineStockIssues} issues`, status: facility.medicineStockIssues >= 3 ? "critical" : facility.medicineStockIssues >= 1 ? "high" : "low" },
-    { icon: Thermometer, label: "Disease", value: `${facility.diseaseSpikeCount} spikes`, status: riskFromValue(facility.diseaseSpikeRisk) },
-    { icon: BedDouble, label: "Beds", value: `${facility.bedOccupancyRate}%`, status: riskFromValue(facility.bedOccupancyRate) },
+    { icon: Activity, label: "Health Score", value: `${f.healthScore}/100`, status: riskFromValue(100 - f.healthScore) },
+    { icon: Stethoscope, label: "Doctors", value: `${f.doctorsPresent}/${f.totalDoctors} present`, status: f.doctorsPresent < f.totalDoctors ? "high" : "low" },
+    { icon: Users, label: "Nurses", value: `${f.nursesPresent}/${f.totalNurses} on duty`, status: f.nursesPresent < f.totalNurses ? "high" : "low" },
+    { icon: Pill, label: "Medicine", value: `${f.medicineStockIssues} issues`, status: f.medicineStockIssues >= 3 ? "critical" : f.medicineStockIssues >= 1 ? "high" : "low" },
+    { icon: Thermometer, label: "Disease", value: `${f.diseaseSpikeCount} spikes`, status: riskFromValue(f.diseaseSpikeRisk) },
+    { icon: BedDouble, label: "Beds", value: `${f.bedOccupancyRate}%`, status: riskFromValue(f.bedOccupancyRate) },
   ];
 
   return (
@@ -174,25 +254,32 @@ export default function FacilityDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-label-xs font-bold uppercase tracking-widest text-outline">{facility.type}</span>
-              <span className={`pill pill-${facility.status}`}>{statusLabel[facility.status] ?? facility.status}</span>
+              <span className="text-label-xs font-bold uppercase tracking-widest text-outline">{f.type}</span>
+              <span className={`pill pill-${f.status}`}>{statusLabel[f.status] ?? f.status}</span>
             </div>
-            <h1 className="mt-1 truncate text-headline-md font-bold text-on-surface md:text-headline-lg">{facility.name}</h1>
-            <p className="mt-1 flex items-center gap-1 text-label-sm text-outline"><MapPin className="h-3.5 w-3.5" /> {facility.village}, {facility.mandal} - {facility.district}</p>
+            <h1 className="mt-1 truncate text-headline-md font-bold text-on-surface md:text-headline-lg">{f.name}</h1>
+            <p className="mt-1 flex items-center gap-1 text-label-sm text-outline"><MapPin className="h-3.5 w-3.5" /> {f.village}, {f.mandal} - {f.district}</p>
           </div>
-          <button onClick={() => setShowPlan(true)} className="gradient-button flex items-center gap-2 rounded-xl px-4 py-2.5 text-label-sm font-semibold text-white shadow-lg shadow-brand-purple/15">
-            <Sparkles className="h-4 w-4" /> Generate AI Action Plan
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {canEditFacility && (
+              <button onClick={() => setShowEditFacility(true)} className="card-glass flex items-center gap-2 rounded-xl px-3.5 py-2 text-label-sm font-semibold hover:bg-surface-container-high">
+                <Edit3 className="h-4 w-4 text-brand-purple" /> Edit Facility
+              </button>
+            )}
+            <button onClick={() => setShowPlan(true)} className="gradient-button flex items-center gap-2 rounded-xl px-4 py-2.5 text-label-sm font-semibold text-white shadow-lg shadow-brand-purple/15">
+              <Sparkles className="h-4 w-4" /> Generate AI Action Plan
+            </button>
+          </div>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-        <StatBox label="Today's OPD" value={facility.todayOpd} color="text-brand-purple" />
-        <StatBox label="7-day Avg" value={facility.avgOpd7day} />
-        <StatBox label="Risk Score" value={`${facility.riskScore}%`} color={facility.riskScore >= 70 ? "text-error" : facility.riskScore >= 45 ? "text-warning" : "text-success"} />
-        <StatBox label="Doctors" value={`${facility.doctorsPresent}/${facility.totalDoctors}`} />
-        <StatBox label="Nurses" value={`${facility.nursesPresent}/${facility.totalNurses}`} />
-        <StatBox label="Critical Patients" value={facility.criticalPatients} color="text-error" />
+        <StatBox label="Today's OPD" value={f.todayOpd} color="text-brand-purple" />
+        <StatBox label="7-day Avg" value={f.avgOpd7day} />
+        <StatBox label="Risk Score" value={`${f.riskScore}%`} color={f.riskScore >= 70 ? "text-error" : f.riskScore >= 45 ? "text-warning" : "text-success"} />
+        <StatBox label="Doctors" value={`${f.doctorsPresent}/${f.totalDoctors}`} />
+        <StatBox label="Nurses" value={`${f.nursesPresent}/${f.totalNurses}`} />
+        <StatBox label="Critical Patients" value={f.criticalPatients} color="text-error" />
         <StatBox label="Follow-ups" value={pendingFollowUps} color="text-warning" />
       </section>
 
@@ -202,7 +289,16 @@ export default function FacilityDetailPage() {
 
       <section className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
-          <Panel title="Doctor Attendance" icon={Stethoscope} action={<span className="text-label-xs font-bold text-outline">{doctors.length} doctors</span>}>
+          <Panel title="Doctor Attendance" icon={Stethoscope} action={
+            <div className="flex items-center gap-2">
+              <span className="text-label-xs font-bold text-outline">{doctors.length} doctors</span>
+              {canAddDoctor && (
+                <button onClick={() => setShowAddDoctor(true)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-purple/10 text-brand-purple hover:bg-brand-purple/20">
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          }>
             <div className="space-y-2">
               {doctors.length > 0 ? doctors.map((doctor) => (
                 <div key={doctor.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-outline-variant/20 bg-white/60 p-2.5">
@@ -219,7 +315,16 @@ export default function FacilityDetailPage() {
             </div>
           </Panel>
 
-          <Panel title="Nurse Workload" icon={Users} action={<span className="text-label-xs font-bold text-outline">{nurses.length} nurses</span>}>
+          <Panel title="Nurse Workload" icon={Users} action={
+            <div className="flex items-center gap-2">
+              <span className="text-label-xs font-bold text-outline">{nurses.length} nurses</span>
+              {canAddNurse && (
+                <button onClick={() => setShowAddNurse(true)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-purple/10 text-brand-purple hover:bg-brand-purple/20">
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          }>
             <div className="space-y-2">
               {nurses.length > 0 ? nurses.map((nurse) => (
                 <div key={nurse.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-outline-variant/20 bg-white/60 p-2.5">
@@ -236,7 +341,13 @@ export default function FacilityDetailPage() {
             </div>
           </Panel>
 
-          <Panel title="Medicine Stock Risk" icon={Pill}>
+          <Panel title="Medicine Stock Risk" icon={Pill} action={
+            canAddMedicine ? (
+              <button onClick={() => setShowAddMedicine(true)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-purple/10 text-brand-purple hover:bg-brand-purple/20">
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            ) : undefined
+          }>
             <div className="space-y-2">
               {meds.length > 0 ? meds.map((medicine) => (
                 <div key={medicine.id} className="rounded-2xl border border-outline-variant/20 bg-white/60 p-2.5">
@@ -258,9 +369,9 @@ export default function FacilityDetailPage() {
           <Panel title="Disease & Bed Pressure" icon={TrendingUp}>
             <div className="space-y-2">
               {[
-                { label: "Disease spike score", value: `${facility.diseaseSpikeRisk}%`, icon: Thermometer, status: riskFromValue(facility.diseaseSpikeRisk) },
-                { label: "Bed occupancy", value: `${facility.bedOccupancyRate}%`, icon: BedDouble, status: riskFromValue(facility.bedOccupancyRate) },
-                { label: "Open alerts", value: facility.openAlerts, icon: AlertCircle, status: facility.openAlerts >= 6 ? "critical" : facility.openAlerts >= 3 ? "high" : "low" },
+                { label: "Disease spike score", value: `${f.diseaseSpikeRisk}%`, icon: Thermometer, status: riskFromValue(f.diseaseSpikeRisk) },
+                { label: "Bed occupancy", value: `${f.bedOccupancyRate}%`, icon: BedDouble, status: riskFromValue(f.bedOccupancyRate) },
+                { label: "Open alerts", value: f.openAlerts, icon: AlertCircle, status: f.openAlerts >= 6 ? "critical" : f.openAlerts >= 3 ? "high" : "low" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between rounded-2xl border border-outline-variant/20 bg-white/60 p-2.5">
                   <div className="flex min-w-0 items-center gap-2">
@@ -294,8 +405,8 @@ export default function FacilityDetailPage() {
             </div>
             <div className="space-y-2">
               {[
-                `Risk score is ${facility.riskScore}% with bed occupancy at ${facility.bedOccupancyRate}%.`,
-                `${facility.medicineStockIssues} medicine pressure point${facility.medicineStockIssues === 1 ? "" : "s"} require stock movement.`,
+                `Risk score is ${f.riskScore}% with bed occupancy at ${f.bedOccupancyRate}%.`,
+                `${f.medicineStockIssues} medicine pressure point${f.medicineStockIssues === 1 ? "" : "s"} require stock movement.`,
                 `${pendingFollowUps} patient follow-ups need routing through doctors and nurses.`,
               ].map((text) => (
                 <div key={text} className="flex gap-2 rounded-2xl border border-brand-purple/10 bg-brand-purple/5 p-2.5">
@@ -311,8 +422,8 @@ export default function FacilityDetailPage() {
 
           <Panel title="Patient Risk Summary" icon={AlertTriangle}>
             <div className="grid grid-cols-2 gap-2">
-              <StatBox label="Total" value={facility.totalPatients} />
-              <StatBox label="Critical" value={facility.criticalPatients} color="text-error" />
+              <StatBox label="Total" value={f.totalPatients} />
+              <StatBox label="Critical" value={f.criticalPatients} color="text-error" />
             </div>
             <div className="mt-3 space-y-2">
               {highRiskPatients.slice(0, 4).map((patient) => (
@@ -344,7 +455,47 @@ export default function FacilityDetailPage() {
         </aside>
       </section>
 
-      {showPlan && <ActionPlanModal onClose={() => setShowPlan(false)} />}
+      {showPlan && <ActionPlanModal facilityId={facilityId ?? ""} onClose={() => setShowPlan(false)} />}
+      {showEditFacility && facility && (
+        <EditFacilityModal
+          facility={{
+            id: facilityId ?? "",
+            name: f.name,
+            facilityType: f.type,
+            location: f.location || f.village || "",
+            overallRisk: f.status,
+            todayOpd: f.todayOpd,
+            medicineRisk: f.medicineRisk || "Low",
+            diseaseSpike: f.diseaseSpike || "Low",
+            bedOccupancy: f.bedOccupancyRate || 0,
+          }}
+          onClose={() => setShowEditFacility(false)}
+          onUpdated={() => refetch()}
+        />
+      )}
+      {showAddDoctor && (
+        <AddDoctorModal
+          facilityId={facilityId ?? ""}
+          facilities={allFacilities ?? []}
+          onClose={() => setShowAddDoctor(false)}
+          onCreated={() => refetch()}
+        />
+      )}
+      {showAddNurse && (
+        <AddNurseModal
+          facilityId={facilityId ?? ""}
+          facilities={allFacilities ?? []}
+          onClose={() => setShowAddNurse(false)}
+          onCreated={() => refetch()}
+        />
+      )}
+      {showAddMedicine && (
+        <AddMedicineModal
+          facilityId={facilityId ?? ""}
+          onClose={() => setShowAddMedicine(false)}
+          onCreated={() => refetch()}
+        />
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Activity, BedDouble, Building2, ChevronRight, MapPin, Search, Stethoscope, Users } from "lucide-react";
 import { dashboardSummary, facilities } from "@/lib/demo-data";
 import type { Facility, FacilityStatus } from "@/lib/demo-data";
-import { useFacilities as useApiFacilities, useDistrictDashboard } from "@/lib/api";
+import { useFacilities as useApiFacilities } from "@/lib/api";
 
 const statusLabel: Record<FacilityStatus, string> = {
   critical: "Critical",
@@ -83,7 +83,6 @@ function FacilityRow({ facility, rank }: { facility: Facility; rank: number }) {
 export default function FacilitiesPage() {
   const [search, setSearch] = useState("");
   const { data: apiFacilities } = useApiFacilities();
-  const { data: dashData } = useDistrictDashboard();
 
   const displayFacilities = useMemo(() => {
     if (apiFacilities && apiFacilities.length > 0) {
@@ -98,38 +97,37 @@ export default function FacilitiesPage() {
         riskScore: f.bedOccupancy,
         healthScore: 100 - f.bedOccupancy,
         todayOpd: f.todayOpd,
-        avgOpd7day: Math.round(f.todayOpd * 0.85),
-        doctorsPresent: 2,
-        totalDoctors: 3,
-        nursesPresent: 4,
-        totalNurses: 5,
-        bedsOccupied: Math.round(f.bedOccupancy * 0.2),
-        totalBeds: 20,
+        avgOpd7day: f.avgOpd7day,
+        doctorsPresent: f.doctorsPresent,
+        totalDoctors: f.totalDoctors,
+        nursesPresent: f.nursesPresent,
+        totalNurses: f.totalNurses,
+        bedsOccupied: f.bedsOccupied,
+        totalBeds: f.totalBeds,
         bedOccupancyRate: f.bedOccupancy,
-        totalPatients: f.todayOpd * 1.2,
-        criticalPatients: Math.round(f.todayOpd * 0.08),
-        openAlerts: f.medicineRisk === "High" ? 5 : 2,
-        medicineStockIssues: f.medicineRisk === "High" ? 3 : 1,
-        diseaseSpikeCount: f.diseaseSpike === "High" ? 2 : 0,
-        diseaseSpikeRisk: f.diseaseSpike === "High" ? 75 : 30,
+        totalPatients: f.totalPatients,
+        criticalPatients: f.criticalPatients,
+        openAlerts: f.openAlerts,
+        medicineStockIssues: f.medicineStockIssues,
+        diseaseSpikeCount: f.diseaseSpikeCount,
+        diseaseSpikeRisk: f.diseaseSpikeRisk,
       })) as Facility[];
     }
     return facilities;
   }, [apiFacilities]);
 
   const liveSummary = useMemo(() => {
-    if (dashData) {
+    if (displayFacilities.length > 0) {
       return {
         ...dashboardSummary,
-        totalFacilities: dashData.metrics.totalFacilities,
-        medicineStockIssues: dashData.metrics.medicineStockAlerts,
-        diseaseSpikeAlerts: dashData.metrics.diseaseSpikeAlerts,
-        criticalPatients: dashData.metrics.highRiskPatients,
-        bedPressureAlerts: Math.round(dashData.metrics.bedPressure / 20),
+        totalFacilities: displayFacilities.length,
+        medicineStockIssues: displayFacilities.reduce((sum, f) => sum + f.medicineStockIssues, 0),
+        diseaseSpikeAlerts: displayFacilities.reduce((sum, f) => sum + f.diseaseSpikeCount, 0),
+        criticalPatients: displayFacilities.reduce((sum, f) => sum + f.criticalPatients, 0),
       };
     }
     return dashboardSummary;
-  }, [dashData]);
+  }, [displayFacilities]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();

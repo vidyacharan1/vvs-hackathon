@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle, Copy, Sparkles } from "lucide-react";
-import { aiInsights, getFacilityName } from "@/lib/demo-data";
+import { aiInsights } from "@/lib/demo-data";
 import type { FacilityStatus } from "@/lib/demo-data";
-import { useAIDistrictBrief, useAlertFeed } from "@/lib/api";
+import { useAIDistrictBrief, useAlertFeed, useFacilities } from "@/lib/api";
 
 const statusPillClass: Record<string, string> = {
   open: "pill pill-critical",
@@ -12,12 +12,17 @@ const statusPillClass: Record<string, string> = {
   resolved: "pill pill-low",
 };
 
+function getFacilityName(facilityList: { id: string; name: string }[], id: string) {
+  return facilityList.find((f) => f.id === id)?.name ?? id;
+}
+
 const filters = ["all", "critical", "high", "medium", "low"];
 
 export default function InsightsPage() {
   const [filter, setFilter] = useState("all");
   const { data: alertFeed, refetch } = useAlertFeed();
   const { data: aiBrief, loading: briefLoading, generate } = useAIDistrictBrief();
+  const { data: apiFacilities } = useFacilities();
 
   const displayInsights = useMemo(() => {
     if (alertFeed && alertFeed.length > 0) {
@@ -91,7 +96,7 @@ export default function InsightsPage() {
                       <p className="truncate text-label-md font-bold text-on-surface">{insight.type}</p>
                       <span className={`pill pill-${insight.severity as FacilityStatus}`}>{insight.severity}</span>
                     </div>
-                    <p className="truncate text-[11px] text-outline">{getFacilityName(insight.facilityId)} - {insight.timestamp}</p>
+                    <p className="truncate text-[11px] text-outline">{getFacilityName(apiFacilities ?? [], insight.facilityId)} - {insight.timestamp}</p>
                   </div>
                 </div>
                 <span className={statusPillClass[insight.status]}>{insight.status}</span>
